@@ -30,9 +30,13 @@ func (c *Config) Clone() *Config {
 		PublicPort: c.PublicPort,
 		AdminPort:  c.AdminPort,
 		Domains:    make([]AliasDomainConfig, len(c.Domains)),
+		Tokens:     make([]TokenConfig, len(c.Tokens)),
 	}
 	for i := range c.Domains {
 		out.Domains[i] = c.Domains[i].Clone()
+	}
+	for i := range c.Tokens {
+		out.Tokens[i] = c.Tokens[i].Clone()
 	}
 	return out
 }
@@ -162,6 +166,15 @@ type TokenConfig struct {
 	Tickers   []string `yaml:"tickers"`
 	Endpoint  string   `yaml:"endpoint"`
 	SecretKey string   `yaml:"secret_key,omitempty"`
+}
+
+func (t TokenConfig) Clone() TokenConfig {
+	return TokenConfig{
+		Name:      t.Name,
+		Tickers:   append([]string(nil), t.Tickers...),
+		Endpoint:  t.Endpoint,
+		SecretKey: t.SecretKey,
+	}
 }
 
 func LoadOrCreateConfig(path string, defaultCfg *Config) (*Config, error) {

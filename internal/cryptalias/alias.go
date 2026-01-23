@@ -54,7 +54,7 @@ func ParseAndCheckDomain(input string, ticker string, config *Config) (Alias, er
 	// Validate domain
 	for _, d := range config.Domains {
 		if d.Domain == alias.Domain {
-			// Validate alias
+			// Validate static aliases...
 			for _, a := range d.Aliases {
 				if a.Alias == alias.Alias {
 					// Check tags first...
@@ -72,6 +72,9 @@ func ParseAndCheckDomain(input string, ticker string, config *Config) (Alias, er
 					}
 				}
 			}
+
+			// Try and get an address for this alias / tag / ticker / domain combo...
+			// ToDo
 		}
 	}
 
