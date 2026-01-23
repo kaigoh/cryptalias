@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package cryptalias.v1;
+
+option go_package = "github.com/kaigoh/cryptalias/proto/cryptalias/v1;cryptaliasv1";
+
+service AssetResolver {
+  rpc GetAddress(WalletAddressRequest) returns (WalletAddressResponse);
+  rpc Health(HealthRequest) returns (HealthResponse);
+}
+
+message WalletAddressRequest {
+  string ticker = 1;
+  string alias = 2;
+  string tag = 3;
+  string domain = 4;
+}
+
+message WalletAddressResponse {
+  string address = 1;
+}
+
+message HealthRequest {}
+message HealthResponse {
+  bool ok = 1;
+  string message = 2;
+}

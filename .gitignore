@@ -1,0 +1,28 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Go build artifacts
+/bin/
+/build/
+/dist/
+
+# Coverage
+coverage.out
+coverage.txt
+
+# Local config (contains generated keys)
+config.yml
+
+# Editor/OS files
+.DS_Store
+.idea/
+.vscode/
+
+# Logs
+*.log
