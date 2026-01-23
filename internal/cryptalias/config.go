@@ -40,10 +40,16 @@ func (c *Config) Clone() *Config {
 func (c *Config) Normalize(path string) {
 	c.BaseURL = strings.TrimSuffix(c.BaseURL, "/")
 	triggerSave := false
+	// Lowercase domains, aliases, tags and tickers
 	for i := range c.Domains {
 		c.Domains[i].Domain = strings.ToLower(c.Domains[i].Domain)
 		for a := range c.Domains[i].Aliases {
 			c.Domains[i].Aliases[a].Alias = strings.ToLower(c.Domains[i].Aliases[a].Alias)
+			c.Domains[i].Aliases[a].Address.Ticker = strings.ToLower(c.Domains[i].Aliases[a].Address.Ticker)
+			for t := range c.Domains[i].Aliases[a].Tags {
+				c.Domains[i].Aliases[a].Tags[t].Tag = strings.ToLower(c.Domains[i].Aliases[a].Tags[t].Tag)
+				c.Domains[i].Aliases[a].Tags[t].Address.Ticker = strings.ToLower(c.Domains[i].Aliases[a].Tags[t].Address.Ticker)
+			}
 		}
 		if result, err := c.Domains[i].GenerateKeys(); !result && err != nil {
 			panic(err)

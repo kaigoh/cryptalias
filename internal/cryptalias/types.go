@@ -18,10 +18,20 @@ const (
 	AliasResolverModeStatic    AliasResolverMode = "static"
 )
 
-type WalletAlias struct {
-	Alias   string `json:"alias" yaml:"alias"`
+type WalletAddress struct {
 	Ticker  string `json:"ticker" yaml:"ticker"`
 	Address string `json:"address" yaml:"address,omitempty"`
+}
+
+type WalletAlias struct {
+	Alias   string        `json:"alias" yaml:"alias"`
+	Address WalletAddress `json:"wallet_address" yaml:"wallet_address"`
+	Tags    []WalletTag   `json:"tags,omitempty" yaml:"tags,omitempty"`
+}
+
+type WalletTag struct {
+	Tag     string        `json:"tag" yaml:"tag"`
+	Address WalletAddress `json:"wallet_address" yaml:"wallet_address"`
 }
 
 type WalletDomain struct {

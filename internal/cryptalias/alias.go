@@ -10,16 +10,21 @@ import (
 var re = regexp.MustCompile(`^([A-Za-z0-9.-]+)(?:\+([A-Za-z0-9.-]+))?\$([A-Za-z0-9.-]+)$`)
 
 type Alias struct {
-	Alias       string
-	Tag         string // Empty if none
-	Domain      string
-	WalletAlias *WalletAlias
+	Alias   string
+	Tag     string // Empty if none
+	Domain  string
+	Address WalletAddress
 }
 
-func ParseAndCheckDomain(input string, config *Config) (Alias, error) {
+func ParseAndCheckDomain(input string, ticker string, config *Config) (Alias, error) {
 	s := strings.TrimSpace(input)
 	if s == "" {
 		return Alias{}, errors.New("empty identifier")
+	}
+
+	ts := strings.ToLower(strings.TrimSpace(ticker))
+	if ts == "" {
+		return Alias{}, errors.New("empty ticker")
 	}
 
 	// Normalise for stable matching
@@ -52,7 +57,19 @@ func ParseAndCheckDomain(input string, config *Config) (Alias, error) {
 			// Validate alias
 			for _, a := range d.Aliases {
 				if a.Alias == alias.Alias {
+					// Check tags first...
+					for _, t := range a.Tags {
+						if t.Tag == alias.Tag && t.Address.Ticker == ts {
+							alias.Address = t.Address
+							return alias, nil
+						}
+					}
 
+					// No match, so return the root alias if tickers match...
+					if a.Address.Ticker == ts {
+						alias.Address = a.Address
+						return alias, nil
+					}
 				}
 			}
 		}
