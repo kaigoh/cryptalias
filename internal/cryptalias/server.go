@@ -24,7 +24,14 @@ var defaultConfig = &Config{
 		{Domain: "127.0.0.1:8080"},
 	},
 	Tokens: []TokenConfig{
-		{Name: "Monero", Tickers: []string{"xmr"}, Endpoint: "cryptalias-monero:50051"},
+		{
+			Name:    "Monero",
+			Tickers: []string{"xmr"},
+			Endpoint: TokenEndpointConfig{
+				EndpointType:    TokenEndpointTypeExternal,
+				EndpointAddress: "cryptalias-monero:50051",
+			},
+		},
 	},
 }
 

@@ -97,9 +97,12 @@ func (c *Config) Validate() error {
 		if len(t.Tickers) == 0 {
 			return fmt.Errorf("at least one tokens[%d].tickers is required, i.e. xmr, btc etc.", i)
 		}
-		if len(t.Endpoint) == 0 {
+		if t.Endpoint.EndpointType == "" {
+			return fmt.Errorf("tokens[%d].endpoint.type is required (internal or external)", i)
+		}
+		if t.Endpoint.EndpointAddress == "" {
 			log.Println(t)
-			return fmt.Errorf("tokens[%d].endpoint is required", i)
+			return fmt.Errorf("tokens[%d].endpoint.address is required", i)
 		}
 	}
 	return nil
@@ -162,19 +165,32 @@ func (a *AliasDomainConfig) GetJWK() (jwk.Key, error) {
 }
 
 type TokenConfig struct {
-	Name      string   `yaml:"name"`
-	Tickers   []string `yaml:"tickers"`
-	Endpoint  string   `yaml:"endpoint"`
-	SecretKey string   `yaml:"secret_key,omitempty"`
+	Name     string              `yaml:"name"`
+	Tickers  []string            `yaml:"tickers"`
+	Endpoint TokenEndpointConfig `yaml:"endpoint"`
 }
 
 func (t TokenConfig) Clone() TokenConfig {
 	return TokenConfig{
-		Name:      t.Name,
-		Tickers:   append([]string(nil), t.Tickers...),
-		Endpoint:  t.Endpoint,
-		SecretKey: t.SecretKey,
+		Name:     t.Name,
+		Tickers:  append([]string(nil), t.Tickers...),
+		Endpoint: t.Endpoint,
 	}
+}
+
+type TokenEndpointType string
+
+const (
+	TokenEndpointTypeInternal = "internal"
+	TokenEndpointTypeExternal = "external"
+)
+
+type TokenEndpointConfig struct {
+	EndpointAddress string            `yaml:"address,omitempty"`
+	EndpointType    TokenEndpointType `yaml:"type"`
+	Token           string            `yaml:"token,omitempty"`
+	Username        string            `yaml:"username,omitempty"`
+	Password        string            `yaml:"password,omitempty"`
 }
 
 func LoadOrCreateConfig(path string, defaultCfg *Config) (*Config, error) {
