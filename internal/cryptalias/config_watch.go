@@ -7,6 +7,8 @@ import (
 	"github.com/fsnotify/fsnotify"
 )
 
+// WatchConfigFile applies on-disk config edits live using fsnotify.
+// It watches both the directory and the file to survive atomic saves.
 func WatchConfigFile(path string, store *ConfigStore) (*fsnotify.Watcher, error) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
@@ -63,6 +65,9 @@ func WatchConfigFile(path string, store *ConfigStore) (*fsnotify.Watcher, error)
 					}
 					// Re-apply logging settings on successful reload.
 					InitLogger(cfg.Logging)
+					for _, d := range cfg.Domains {
+						slog.Info("dns txt record", "domain", d.Domain, "name", "_cryptalias."+d.Domain, "value", d.DNSTXTValue())
+					}
 					slog.Info("config reloaded from disk", "path", path)
 				}
 

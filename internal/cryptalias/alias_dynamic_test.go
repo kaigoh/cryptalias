@@ -27,7 +27,6 @@ func TestResolveAliasFallsBackToDynamic(t *testing.T) {
 	cfg := &Config{
 		BaseURL:    "http://127.0.0.1:8080",
 		PublicPort: 8080,
-		AdminPort:  9090,
 		Logging:    LoggingConfig{Level: "info"},
 		Domains: []AliasDomainConfig{{
 			Domain:     "127.0.0.1",

@@ -4,14 +4,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-
-	"github.com/99designs/gqlgen/graphql/handler"
-	"github.com/99designs/gqlgen/graphql/handler/extension"
-	"github.com/99designs/gqlgen/graphql/handler/lru"
-	"github.com/99designs/gqlgen/graphql/handler/transport"
-	"github.com/99designs/gqlgen/graphql/playground"
-	"github.com/kaigoh/cryptalias/graph"
-	"github.com/vektah/gqlparser/v2/ast"
 )
 
 const VERSION = 0
@@ -19,7 +11,6 @@ const VERSION = 0
 var defaultConfig = &Config{
 	BaseURL:    "http://127.0.0.1:8080",
 	PublicPort: 8080,
-	AdminPort:  9090,
 	Logging: LoggingConfig{
 		Level: "info",
 	},
@@ -64,6 +55,9 @@ func Run(configPath string) error {
 	}
 	InitLogger(cfg.Logging)
 	slog.Info("config loaded", "path", configPath, "base_url", cfg.BaseURL)
+	for _, d := range cfg.Domains {
+		slog.Info("dns txt record", "domain", d.Domain, "name", "_cryptalias."+d.Domain, "value", d.DNSTXTValue())
+	}
 
 	store := NewConfigStore(configPath, cfg)
 	resolver, err := NewWalletResolver(configPath)
@@ -77,24 +71,7 @@ func Run(configPath string) error {
 	}
 	slog.Info("config watcher started", "path", configPath)
 
-	srv := handler.New(graph.NewExecutableSchema(graph.Config{Resolvers: &graph.Resolver{}}))
-
-	srv.AddTransport(transport.Options{})
-	srv.AddTransport(transport.GET{})
-	srv.AddTransport(transport.POST{})
-
-	srv.SetQueryCache(lru.New[*ast.QueryDocument](1000))
-
-	srv.Use(extension.Introspection{})
-	srv.Use(extension.AutomaticPersistedQuery{
-		Cache: lru.New[string](100),
-	})
-
-	adminMux := http.NewServeMux()
-	adminMux.Handle("/", playground.Handler("GraphQL playground", "/query"))
-	adminMux.Handle("/query", srv)
-
-	// Public endpoints
+	// Public endpoints only.
 	publicMux := http.NewServeMux()
 	publicMux.HandleFunc("GET /.well-known/cryptalias", WellKnownHandler(store))
 	publicMux.HandleFunc("GET /_cryptalias/keys", JWKSKeysHandler(store))
@@ -103,21 +80,13 @@ func Run(configPath string) error {
 	resolveHandler = newRateLimiter(store).middleware(resolveHandler)
 	publicMux.Handle("GET /_cryptalias/resolve/{ticker}/{alias}", resolveHandler)
 
-	adminAddr := fmt.Sprintf(":%d", cfg.AdminPort)
 	publicAddr := fmt.Sprintf(":%d", cfg.PublicPort)
 
 	slog.Info("public server listening", "addr", publicAddr, "base_url", cfg.BaseURL)
-	slog.Info("private GraphQL playground listening", "addr", adminAddr, "path", "/query")
 
-	errCh := make(chan error, 2)
-	go func() {
-		errCh <- http.ListenAndServe(publicAddr, publicMux)
-	}()
-	go func() {
-		errCh <- http.ListenAndServe(adminAddr, adminMux)
-	}()
-
-	err = <-errCh
-	slog.Error("server exited", "error", err)
-	return err
+	if err := http.ListenAndServe(publicAddr, publicMux); err != nil {
+		slog.Error("server exited", "error", err)
+		return err
+	}
+	return nil
 }

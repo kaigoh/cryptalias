@@ -8,6 +8,8 @@ import (
 	"time"
 )
 
+// AddressStore persists the per-client resolution cache so restarts do not
+// immediately rotate addresses for active clients.
 type AddressStore struct {
 	mu   sync.RWMutex
 	path string
@@ -41,7 +43,8 @@ func statePathFor(configPath string) string {
 }
 
 func aliasKey(ticker, domain, alias, tag, accountKey, clientKey string) string {
-	// Keep the key stable and readable; tag may be empty.
+	// The cache key includes client and optional account routing hints to prevent
+	// cross-client leakage and to keep per-alias account selection isolated.
 	return ticker + "|" + domain + "|" + alias + "|" + tag + "|" + accountKey + "|" + clientKey
 }
 
@@ -118,6 +121,7 @@ func (s *AddressStore) saveLocked() error {
 	return writeFileAtomic(s.path, b, 0o600)
 }
 
+// writeFileAtomic mirrors config atomic writes for state persistence.
 func writeFileAtomic(path string, data []byte, perm os.FileMode) error {
 	dir := filepath.Dir(path)
 	tmp, err := os.CreateTemp(dir, ".cryptalias.state-*.json")

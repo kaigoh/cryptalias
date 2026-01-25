@@ -21,6 +21,8 @@ const (
 type WalletAddress struct {
 	Ticker       string  `json:"ticker" yaml:"ticker"`
 	Address      string  `json:"address" yaml:"address"`
+	// Optional alias-local routing hints forwarded to wallet services over gRPC.
+	// These are intentionally optional so integrations can ignore them.
 	AccountIndex *uint64 `json:"account_index,omitempty" yaml:"account_index,omitempty"`
 	AccountID    *string `json:"account_id,omitempty" yaml:"account_id,omitempty"`
 	WalletID     *string `json:"wallet_id,omitempty" yaml:"wallet_id,omitempty"`

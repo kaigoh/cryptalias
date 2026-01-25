@@ -91,6 +91,7 @@ func AliasResolverHandler(store *ConfigStore, resolver walletResolver) http.Hand
 		c := store.Get()
 		identity := newClientIdentity(c.Resolution.ClientIdentity)
 		clientKey := identity.Key(r)
+		// Propagate the derived client identity so the resolver cache can bind to it.
 		ctx := withClientKey(r.Context(), clientKey)
 
 		alias, err := ResolveAlias(ctx, rawAlias, ticker, c, resolver)
@@ -140,6 +141,7 @@ func AliasResolverHandler(store *ConfigStore, resolver walletResolver) http.Hand
 		}
 
 		// ...and send it
+		// The response body is a compact JWS, not plain JSON.
 		w.Header().Set("Content-Type", "application/jose")
 		w.WriteHeader(http.StatusOK)
 		w.Write(signed)

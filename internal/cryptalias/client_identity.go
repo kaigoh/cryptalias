@@ -26,6 +26,7 @@ type ClientIdentityConfig struct {
 	Header   string                 `yaml:"header,omitempty"`
 }
 
+// clientIdentity derives a stable per-client key used for both caching and rate limiting.
 type clientIdentity struct {
 	strategy ClientIdentityStrategy
 	header   string
@@ -47,6 +48,8 @@ func withClientKey(ctx context.Context, key string) context.Context {
 	return context.WithValue(ctx, clientKeyContextKey{}, key)
 }
 
+// clientKeyFromContext is used by the resolver so client identity computed in the
+// HTTP layer can flow through to the wallet resolution cache.
 func clientKeyFromContext(ctx context.Context) string {
 	if ctx == nil {
 		return "unknown"

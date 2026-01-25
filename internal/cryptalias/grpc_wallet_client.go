@@ -26,6 +26,8 @@ func newGRPCWalletClient() *grpcWalletClient {
 	}
 }
 
+// GetAddress resolves via an external gRPC wallet service. Connections are
+// cached per endpoint address to avoid re-dialing on each request.
 func (c *grpcWalletClient) GetAddress(ctx context.Context, endpoint TokenEndpointConfig, in dynamicAliasInput) (string, error) {
 	client, err := c.clientFor(endpoint.EndpointAddress)
 	if err != nil {

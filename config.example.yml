@@ -1,0 +1,47 @@
+base_url: http://cryptalias.localhost
+public_port: 8080
+
+logging:
+  level: info
+
+rate_limit:
+  enabled: true
+  requests_per_minute: 60
+  burst: 10
+
+resolution:
+  ttl_seconds: 60
+  client_identity:
+    # Behind Traefik/Caddy/Nginx, xff is usually what you want.
+    strategy: xff
+    header: X-Forwarded-For
+
+domains:
+  - domain: cryptalias.localhost
+    # Leave keys empty on first run if you want Cryptalias to generate them.
+    # Cryptalias will print the DNS TXT record you should add.
+    aliases:
+      - alias: me
+        wallet:
+          ticker: xmr
+          # Empty address means dynamic resolution via the wallet service.
+          address: ""
+          account_index: 0
+
+      - alias: donations
+        wallet:
+          ticker: xmr
+          address: ""
+          account_index: 10
+
+tokens:
+  - name: Monero
+    tickers: [xmr]
+    endpoint:
+      type: internal
+      address: http://monero-wallet-rpc:18083/json_rpc
+      username: cryptalias
+      password: change-me
+      # This wallet file must exist inside the monero-wallet-rpc container.
+      wallet_file: main
+      wallet_password: change-me-wallet

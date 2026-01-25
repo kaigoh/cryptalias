@@ -1,0 +1,55 @@
+version: "3.9"
+
+networks:
+  cryptalias:
+    name: cryptalias
+
+services:
+  traefik:
+    image: traefik:v3.1
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --api.dashboard=true
+      # Dev-only dashboard on :8080
+      - --api.insecure=true
+    ports:
+      - "80:80"
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - cryptalias
+
+  monero-wallet-rpc:
+    image: espejelomar/monero-wallet-rpc:latest
+    command:
+      - --confirm-external-bind
+      - --rpc-bind-ip=0.0.0.0
+      - --rpc-bind-port=18083
+      - --rpc-login=${MONERO_RPC_USER:-cryptalias}:${MONERO_RPC_PASS:-change-me}
+      - --wallet-dir=/wallets
+      - --daemon-address=${MONERO_DAEMON_ADDRESS:-monerod:18081}
+    volumes:
+      - ./monero:/wallets
+    networks:
+      - cryptalias
+
+  cryptalias:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["/config/config.yml"]
+    volumes:
+      - ./config.yml:/config/config.yml
+    depends_on:
+      - monero-wallet-rpc
+    networks:
+      - cryptalias
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=cryptalias
+      - traefik.http.routers.cryptalias.rule=Host(`cryptalias.localhost`)
+      - traefik.http.routers.cryptalias.entrypoints=web
+      - traefik.http.services.cryptalias.loadbalancer.server.port=8080

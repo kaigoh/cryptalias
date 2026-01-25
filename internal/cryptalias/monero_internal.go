@@ -25,6 +25,8 @@ type internalMoneroGRPC struct {
 	svc    *moneroWalletService
 }
 
+// newInternalMoneroGRPC spins up an in-process gRPC server over bufconn so the
+// internal integration exercises the same protobuf contract as external plugins.
 func newInternalMoneroGRPC(endpoint TokenEndpointConfig) (*internalMoneroGRPC, error) {
 	lis := bufconn.Listen(internalBufSize)
 	svc := newMoneroWalletService(endpoint)
@@ -78,12 +80,15 @@ func (s *moneroWalletService) GetAddress(ctx context.Context, req *cryptaliasv1.
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	// Alias-local account routing is optional; default to account 0.
 	accountIndex := uint64(0)
 	if req.AccountIndex != nil {
 		accountIndex = req.GetAccountIndex()
 	}
 
 	if strings.TrimSpace(ep.WalletFile) != "" {
+		// When wallet_file is configured, open/close per request to avoid leaking
+		// state across reloads and to keep behavior explicit.
 		if err := client.OpenWallet(ctx, &walletrpc.OpenWalletRequest{
 			Filename: ep.WalletFile,
 			Password: ep.WalletPassword,

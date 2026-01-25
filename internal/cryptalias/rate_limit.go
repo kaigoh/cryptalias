@@ -15,6 +15,8 @@ type limiterEntry struct {
 	lastSeen time.Time
 }
 
+// rateLimitSnapshot captures just the pieces of config that affect limiting.
+// Comparing snapshots lets us react to config reloads without extra watchers.
 type rateLimitSnapshot struct {
 	enabled  bool
 	rpm      int
@@ -23,6 +25,8 @@ type rateLimitSnapshot struct {
 	header   string
 }
 
+// rateLimiter maintains per-client token buckets and refreshes itself from the
+// ConfigStore on each request, so config reloads take effect immediately.
 type rateLimiter struct {
 	mu       sync.Mutex
 	store    *ConfigStore

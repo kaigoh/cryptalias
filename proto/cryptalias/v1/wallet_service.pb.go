@@ -22,14 +22,16 @@ const (
 )
 
 type WalletAddressRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Ticker        string                 `protobuf:"bytes,1,opt,name=ticker,proto3" json:"ticker,omitempty"`
-	Alias         string                 `protobuf:"bytes,2,opt,name=alias,proto3" json:"alias,omitempty"`
-	Tag           string                 `protobuf:"bytes,3,opt,name=tag,proto3" json:"tag,omitempty"`
-	Domain        string                 `protobuf:"bytes,4,opt,name=domain,proto3" json:"domain,omitempty"`
-	AccountIndex  *uint64                `protobuf:"varint,5,opt,name=account_index,json=accountIndex,proto3,oneof" json:"account_index,omitempty"`
-	AccountId     *string                `protobuf:"bytes,6,opt,name=account_id,json=accountId,proto3,oneof" json:"account_id,omitempty"`
-	WalletId      *string                `protobuf:"bytes,7,opt,name=wallet_id,json=walletId,proto3,oneof" json:"wallet_id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Parsed alias identifier components.
+	Ticker string `protobuf:"bytes,1,opt,name=ticker,proto3" json:"ticker,omitempty"`
+	Alias  string `protobuf:"bytes,2,opt,name=alias,proto3" json:"alias,omitempty"`
+	Tag    string `protobuf:"bytes,3,opt,name=tag,proto3" json:"tag,omitempty"`
+	Domain string `protobuf:"bytes,4,opt,name=domain,proto3" json:"domain,omitempty"`
+	// Optional alias-local routing hints from config.yml. Wallet services may ignore them.
+	AccountIndex  *uint64 `protobuf:"varint,5,opt,name=account_index,json=accountIndex,proto3,oneof" json:"account_index,omitempty"`
+	AccountId     *string `protobuf:"bytes,6,opt,name=account_id,json=accountId,proto3,oneof" json:"account_id,omitempty"`
+	WalletId      *string `protobuf:"bytes,7,opt,name=wallet_id,json=walletId,proto3,oneof" json:"wallet_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }

@@ -3,8 +3,10 @@ package cryptalias
 import (
 	"crypto/ed25519"
 	"crypto/rand"
+	"encoding/base64"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 
@@ -12,10 +14,11 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+// Config is the full runtime configuration loaded from config.yml.
+// It is treated as immutable once applied to the ConfigStore.
 type Config struct {
 	BaseURL    string              `yaml:"base_url"`
 	PublicPort uint16              `yaml:"public_port"`
-	AdminPort  uint16              `yaml:"admin_port"`
 	Logging    LoggingConfig       `yaml:"logging,omitempty"`
 	RateLimit  RateLimitConfig     `yaml:"rate_limit,omitempty"`
 	Resolution ResolutionConfig    `yaml:"resolution,omitempty"`
@@ -30,7 +33,6 @@ func (c *Config) Clone() *Config {
 	out := &Config{
 		BaseURL:    c.BaseURL,
 		PublicPort: c.PublicPort,
-		AdminPort:  c.AdminPort,
 		Logging:    c.Logging,
 		RateLimit:  c.RateLimit.Clone(),
 		Resolution: c.Resolution.Clone(),
@@ -46,6 +48,8 @@ func (c *Config) Clone() *Config {
 	return out
 }
 
+// Normalize fills defaults, stabilizes casing/whitespace, and may persist
+// generated keys back to disk so reloads remain deterministic.
 func (c *Config) Normalize(path string) {
 	c.BaseURL = strings.TrimSuffix(c.BaseURL, "/")
 	if strings.TrimSpace(c.Logging.Level) == "" {
@@ -94,15 +98,13 @@ func (c *Config) Normalize(path string) {
 	}
 }
 
+// Validate checks that the normalized config is internally consistent.
 func (c *Config) Validate() error {
 	if c.BaseURL == "" {
 		return fmt.Errorf("base_url is required")
 	}
 	if c.PublicPort == 0 {
 		return fmt.Errorf("public_port must be set")
-	}
-	if c.AdminPort == 0 {
-		return fmt.Errorf("admin_port must be set")
 	}
 	if _, ok := parseLogLevel(c.Logging.Level); !ok {
 		return fmt.Errorf("logging.level must be one of: debug, info, warn, error")
@@ -179,13 +181,16 @@ type LoggingConfig struct {
 }
 
 type RateLimitConfig struct {
+	// Enabled defaults to true when omitted.
 	Enabled           *bool `yaml:"enabled,omitempty"`
 	RequestsPerMinute int   `yaml:"requests_per_minute,omitempty"`
 	Burst             int   `yaml:"burst,omitempty"`
 }
 
 type ResolutionConfig struct {
+	// TTLSeconds controls how long a per-client resolved address is reused.
 	TTLSeconds     int                  `yaml:"ttl_seconds,omitempty"`
+	// ClientIdentity determines how "same client" is derived for caching and limits.
 	ClientIdentity ClientIdentityConfig `yaml:"client_identity,omitempty"`
 }
 
@@ -238,6 +243,9 @@ func (a *AliasDomainConfig) GenerateKeys() (bool, error) {
 	a.PrivateKey = PrivateKey(priv)
 	a.PublicKey = PublicKey(pub)
 
+	// Logger may not be initialized yet, so use the standard logger here.
+	log.Printf("generated keys for domain %s; add DNS TXT: %s", a.Domain, a.DNSTXTRecord())
+
 	return true, nil
 }
 
@@ -269,6 +277,16 @@ func (a *AliasDomainConfig) GetSigningJWK() (jwk.Key, error) {
 	return key, nil
 }
 
+// DNSTXTValue returns the TXT record value that publishes the public key.
+func (a *AliasDomainConfig) DNSTXTValue() string {
+	return "pubkey=" + base64.StdEncoding.EncodeToString([]byte(a.PublicKey))
+}
+
+// DNSTXTRecord returns a ready-to-copy DNS TXT record line.
+func (a *AliasDomainConfig) DNSTXTRecord() string {
+	return fmt.Sprintf("_cryptalias.%s IN TXT %q", a.Domain, a.DNSTXTValue())
+}
+
 type TokenConfig struct {
 	Name     string              `yaml:"name"`
 	Tickers  []string            `yaml:"tickers"`
@@ -293,9 +311,11 @@ const (
 type TokenEndpointConfig struct {
 	EndpointAddress string            `yaml:"address,omitempty"`
 	EndpointType    TokenEndpointType `yaml:"type"`
+	// Token/Username/Password are forwarded as auth metadata to external gRPC services.
 	Token           string            `yaml:"token,omitempty"`
 	Username        string            `yaml:"username,omitempty"`
 	Password        string            `yaml:"password,omitempty"`
+	// WalletFile/WalletPassword are used by internal integrations (e.g. Monero).
 	WalletFile      string            `yaml:"wallet_file,omitempty"`
 	WalletPassword  string            `yaml:"wallet_password,omitempty"`
 }
@@ -359,6 +379,7 @@ func SaveConfig(path string, cfg *Config) error {
 	if cfg == nil {
 		return fmt.Errorf("config is nil")
 	}
+	// Normalize before save so the watcher can re-load without churn.
 	cfg.Normalize(path)
 	data, err := yaml.Marshal(cfg)
 	if err != nil {

@@ -19,6 +19,8 @@ type WalletResolver struct {
 	externalFn func(ctx context.Context, token TokenConfig, in dynamicAliasInput) (string, error)
 }
 
+// NewWalletResolver wires together state persistence, external gRPC clients,
+// and internal wallet integrations.
 func NewWalletResolver(configPath string) (*WalletResolver, error) {
 	state, err := newAddressStore(configPath)
 	if err != nil {
@@ -51,11 +53,14 @@ type dynamicAliasInput struct {
 	Alias        string
 	Tag          string
 	Domain       string
+	// Optional alias-local routing hints passed through to wallet services.
 	AccountIndex *uint64
 	AccountID    *string
 	WalletID     *string
 }
 
+// Resolve performs dynamic resolution via the configured endpoint type and
+// enforces per-client TTL caching to reduce address sniffing.
 func (r *WalletResolver) Resolve(ctx context.Context, cfg *Config, in dynamicAliasInput) (WalletAddress, error) {
 	token, err := findTokenConfig(cfg, in.Ticker)
 	if err != nil {
@@ -153,5 +158,6 @@ func accountKey(in dynamicAliasInput) string {
 	if in.WalletID != nil && *in.WalletID != "" {
 		parts = append(parts, "wid="+*in.WalletID)
 	}
+	// Empty means "no routing hints" and still participates in the cache key.
 	return strings.Join(parts, "|")
 }

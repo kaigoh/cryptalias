@@ -26,6 +26,7 @@ type Alias struct {
 	Wallet     WalletAddress
 }
 
+// ParseAlias resolves only static mappings from config.
 func ParseAlias(input string, ticker string, config *Config) (Alias, error) {
 	alias, domainCfg, tickerClean, err := parseAliasIdentifier(input, ticker, config)
 	if err != nil {
@@ -39,6 +40,9 @@ func ParseAlias(input string, ticker string, config *Config) (Alias, error) {
 	return Alias{}, ErrAliasNotFound
 }
 
+// ResolveAlias prefers static mappings, then falls back to dynamic resolution.
+// When a static alias exists but has no address, its optional routing hints
+// (account_index/account_id/wallet_id) are forwarded to the wallet service.
 func ResolveAlias(ctx context.Context, input string, ticker string, cfg *Config, resolver walletResolver) (Alias, error) {
 	alias, domainCfg, tickerClean, err := parseAliasIdentifier(input, ticker, cfg)
 	if err != nil {

@@ -14,6 +14,8 @@ type ConfigStore struct {
 	path string
 }
 
+// NewConfigStore creates a threadsafe config holder that also knows its path,
+// enabling Save/Update to persist without callers passing paths around.
 func NewConfigStore(path string, cfg *Config) *ConfigStore {
 	return &ConfigStore{
 		path: path,
@@ -21,12 +23,14 @@ func NewConfigStore(path string, cfg *Config) *ConfigStore {
 	}
 }
 
+// Get returns a defensive clone so callers cannot mutate shared state.
 func (s *ConfigStore) Get() *Config {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.cfg.Clone()
 }
 
+// Set validates and applies a config in memory only (no disk write).
 func (s *ConfigStore) Set(cfg *Config) error {
 	if cfg == nil {
 		return fmt.Errorf("config is nil")
@@ -42,6 +46,7 @@ func (s *ConfigStore) Set(cfg *Config) error {
 	return nil
 }
 
+// Save validates, writes to disk atomically, then applies in memory.
 func (s *ConfigStore) Save(cfg *Config) error {
 	if cfg == nil {
 		return fmt.Errorf("config is nil")
@@ -60,6 +65,7 @@ func (s *ConfigStore) Save(cfg *Config) error {
 	return nil
 }
 
+// SaveCurrent persists the already-applied config without requiring a path.
 func (s *ConfigStore) SaveCurrent() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -76,6 +82,8 @@ func (s *ConfigStore) SaveCurrent() error {
 	return nil
 }
 
+// Update is the preferred mutation entry point: it clones, mutates, validates,
+// saves atomically, and only then swaps the in-memory pointer.
 func (s *ConfigStore) Update(fn func(*Config) error) error {
 	if fn == nil {
 		return fmt.Errorf("update function is nil")
@@ -99,6 +107,8 @@ func (s *ConfigStore) Update(fn func(*Config) error) error {
 	return nil
 }
 
+// saveConfigAtomic writes to a temp file in the same directory and renames it,
+// so readers never observe partial writes and fsnotify sees a clean replace.
 func saveConfigAtomic(path string, data []byte) error {
 	dir := filepath.Dir(path)
 	// Write to a temp file in the same directory so rename is atomic.

@@ -10,10 +10,12 @@ service WalletService {
 }
 
 message WalletAddressRequest {
+  // Parsed alias identifier components.
   string ticker = 1;
   string alias = 2;
   string tag = 3;
   string domain = 4;
+  // Optional alias-local routing hints from config.yml. Wallet services may ignore them.
   optional uint64 account_index = 5;
   optional string account_id = 6;
   optional string wallet_id = 7;

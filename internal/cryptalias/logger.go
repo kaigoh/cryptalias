@@ -24,6 +24,7 @@ func parseLogLevel(level string) (slog.Level, bool) {
 	}
 }
 
+// InitLogger applies the configured level globally and is safe to call on reload.
 func InitLogger(cfg LoggingConfig) {
 	lvl, ok := parseLogLevel(cfg.Level)
 	if !ok {
