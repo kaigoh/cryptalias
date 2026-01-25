@@ -14,7 +14,7 @@ type clientKeyContextKey struct{}
 type ClientIdentityStrategy string
 
 const (
-	ClientIdentityStrategyRemoteAddr ClientIdentityStrategy = "remote_addr"
+	ClientIdentityStrategyRemoteAddr ClientIdentityStrategy = "remote_address"
 	ClientIdentityStrategyXFF        ClientIdentityStrategy = "xff"
 	ClientIdentityStrategyXFFUA      ClientIdentityStrategy = "xff_ua"
 	ClientIdentityStrategyHeader     ClientIdentityStrategy = "header"

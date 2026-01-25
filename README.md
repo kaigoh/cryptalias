@@ -173,7 +173,7 @@ This is what `resolution.client_identity` controls.
 
 ### Strategies (what the options mean)
 
-- `remote_addr`: use the IP address of the direct TCP connection
+- `remote_address`: use the IP address of the direct TCP connection
 - `xff`: use the first value from `X-Forwarded-For`
 - `xff_ua`: use `X-Forwarded-For` plus a hashed user agent
 - `header`: use a custom header you choose
@@ -188,13 +188,13 @@ Notes:
 
 #### Not behind a reverse proxy
 
-If clients connect directly to Cryptalias, use `remote_addr`:
+If clients connect directly to Cryptalias, use `remote_address`:
 
 ```yaml
 resolution:
   ttl_seconds: 60
   client_identity:
-    strategy: remote_addr
+    strategy: remote_address
 ```
 
 #### Behind Traefik
@@ -252,7 +252,7 @@ proxy_set_header X-Real-IP $remote_addr;
 
 ### Quick rule of thumb
 
-- No proxy: `remote_addr`
+- No proxy: `remote_address`
 - Any normal proxy: `xff`
 - Lots of shared IPs: `xff_ua`
 
@@ -354,7 +354,7 @@ It keeps reloading but nothing changes
 Everything seems to come from the same client
 
 - You probably have the wrong `client_identity.strategy` for your setup
-- No proxy: use `remote_addr`
+- No proxy: use `remote_address`
 - Behind a proxy: use `xff` (and make sure the proxy forwards the header)
 
 Dynamic alias calls the wallet when you expected static

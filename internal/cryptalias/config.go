@@ -123,7 +123,7 @@ func (c *Config) Validate() error {
 	switch c.Resolution.ClientIdentity.Strategy {
 	case ClientIdentityStrategyRemoteAddr, ClientIdentityStrategyXFF, ClientIdentityStrategyXFFUA, ClientIdentityStrategyHeader, ClientIdentityStrategyHeaderUA:
 	default:
-		return fmt.Errorf("resolution.client_identity.strategy must be one of: remote_addr, xff, xff_ua, header, header_ua")
+		return fmt.Errorf("resolution.client_identity.strategy must be one of: remote_address, xff, xff_ua, header, header_ua")
 	}
 	if (c.Resolution.ClientIdentity.Strategy == ClientIdentityStrategyHeader || c.Resolution.ClientIdentity.Strategy == ClientIdentityStrategyHeaderUA) && strings.TrimSpace(c.Resolution.ClientIdentity.Header) == "" {
 		return fmt.Errorf("resolution.client_identity.header is required when strategy is header or header_ua")
