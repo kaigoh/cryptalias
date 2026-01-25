@@ -20,20 +20,19 @@ type Alias struct {
 }
 
 func ParseAlias(input string, ticker string, config *Config) (Alias, error) {
-	s := strings.TrimSpace(input)
-	if s == "" {
+	inputClean := strings.TrimSpace(input)
+	if inputClean == "" {
 		return Alias{}, errors.New("empty identifier")
 	}
 
-	ts := strings.ToLower(strings.TrimSpace(ticker))
-	if ts == "" {
+	tickerClean := strings.ToLower(strings.TrimSpace(ticker))
+	if tickerClean == "" {
 		return Alias{}, errors.New("empty ticker")
 	}
 
 	// Normalise for stable matching
-	s = strings.ToLower(s)
-
-	m := re.FindStringSubmatch(s)
+	inputClean = strings.ToLower(inputClean)
+	m := re.FindStringSubmatch(inputClean)
 	if m == nil {
 		return Alias{}, errors.New("invalid format (expected alias[+tag]$domain)")
 	}
@@ -70,14 +69,14 @@ func ParseAlias(input string, ticker string, config *Config) (Alias, error) {
 				if a.Alias == alias.Alias {
 					// Check tags first...
 					for _, t := range a.Tags {
-						if t.Tag == alias.Tag && t.Wallet.Ticker == ts {
+						if t.Tag == alias.Tag && t.Wallet.Ticker == tickerClean {
 							alias.Wallet = t.Wallet
 							return alias, nil
 						}
 					}
 
 					// No match, so return the root alias if tickers match...
-					if a.Wallet.Ticker == ts {
+					if a.Wallet.Ticker == tickerClean {
 						alias.Wallet = a.Wallet
 						return alias, nil
 					}
