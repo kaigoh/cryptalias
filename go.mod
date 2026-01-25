@@ -8,6 +8,7 @@ require (
 	github.com/99designs/gqlgen v0.17.86
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/vektah/gqlparser/v2 v2.5.31
+	golang.org/x/time v0.8.0
 	google.golang.org/grpc v1.78.0
 	google.golang.org/protobuf v1.36.11
 )

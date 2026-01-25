@@ -23,6 +23,18 @@ var defaultConfig = &Config{
 	Logging: LoggingConfig{
 		Level: "info",
 	},
+	RateLimit: RateLimitConfig{
+		Enabled:           boolPtr(true),
+		RequestsPerMinute: 60,
+		Burst:             10,
+	},
+	Resolution: ResolutionConfig{
+		TTLSeconds: 60,
+		ClientIdentity: ClientIdentityConfig{
+			Strategy: ClientIdentityStrategyXFF,
+			Header:   "X-Forwarded-For",
+		},
+	},
 	Domains: []AliasDomainConfig{
 		{Domain: "127.0.0.1"},
 	},
@@ -54,6 +66,11 @@ func Run(configPath string) error {
 	slog.Info("config loaded", "path", configPath, "base_url", cfg.BaseURL)
 
 	store := NewConfigStore(configPath, cfg)
+	resolver, err := NewWalletResolver(configPath)
+	if err != nil {
+		slog.Error("wallet resolver failed to start", "error", err)
+		return err
+	}
 	if _, err := WatchConfigFile(configPath, store); err != nil {
 		slog.Error("config watcher failed to start", "path", configPath, "error", err)
 		return err
@@ -81,7 +98,10 @@ func Run(configPath string) error {
 	publicMux := http.NewServeMux()
 	publicMux.HandleFunc("GET /.well-known/cryptalias", WellKnownHandler(store))
 	publicMux.HandleFunc("GET /_cryptalias/keys", JWKSKeysHandler(store))
-	publicMux.HandleFunc("GET /_cryptalias/resolve/{ticker}/{alias}", AliasResolverHandler(store))
+
+	resolveHandler := http.Handler(AliasResolverHandler(store, resolver))
+	resolveHandler = newRateLimiter(store).middleware(resolveHandler)
+	publicMux.Handle("GET /_cryptalias/resolve/{ticker}/{alias}", resolveHandler)
 
 	adminAddr := fmt.Sprintf(":%d", cfg.AdminPort)
 	publicAddr := fmt.Sprintf(":%d", cfg.PublicPort)

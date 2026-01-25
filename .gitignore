@@ -18,6 +18,7 @@ coverage.txt
 
 # Local config (contains generated keys)
 config.yml
+config.yml.state.json
 
 # Editor/OS files
 .DS_Store

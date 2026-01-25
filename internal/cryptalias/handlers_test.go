@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -13,13 +14,20 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jws"
 )
 
-func newTestStore(t *testing.T) *ConfigStore {
+func newTestStore(t *testing.T) (*ConfigStore, *WalletResolver) {
 	t.Helper()
-	return NewConfigStore("config.yml", testConfig(t))
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.yml")
+	store := NewConfigStore(path, testConfig(t))
+	resolver, err := NewWalletResolver(path)
+	if err != nil {
+		t.Fatalf("new wallet resolver: %v", err)
+	}
+	return store, resolver
 }
 
 func TestWellKnownHandler(t *testing.T) {
-	store := newTestStore(t)
+	store, _ := newTestStore(t)
 	req := httptest.NewRequest(http.MethodGet, "/.well-known/cryptalias", nil)
 	req.Host = "127.0.0.1"
 	rr := httptest.NewRecorder()
@@ -35,7 +43,7 @@ func TestWellKnownHandler(t *testing.T) {
 }
 
 func TestJWKSKeysHandler(t *testing.T) {
-	store := newTestStore(t)
+	store, _ := newTestStore(t)
 	req := httptest.NewRequest(http.MethodGet, "/_cryptalias/keys", nil)
 	rr := httptest.NewRecorder()
 
@@ -63,13 +71,13 @@ func TestJWKSKeysHandler(t *testing.T) {
 }
 
 func TestAliasResolverHandlerSignsPayload(t *testing.T) {
-	store := newTestStore(t)
+	store, resolver := newTestStore(t)
 	req := httptest.NewRequest(http.MethodGet, "/_cryptalias/resolve/xmr/demo$127.0.0.1", nil)
 	req.SetPathValue("ticker", "xmr")
 	req.SetPathValue("alias", "demo$127.0.0.1")
 	rr := httptest.NewRecorder()
 
-	AliasResolverHandler(store).ServeHTTP(rr, req)
+	AliasResolverHandler(store, resolver).ServeHTTP(rr, req)
 
 	if rr.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rr.Code, rr.Body.String())

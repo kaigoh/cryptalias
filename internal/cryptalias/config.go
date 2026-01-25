@@ -17,6 +17,8 @@ type Config struct {
 	PublicPort uint16              `yaml:"public_port"`
 	AdminPort  uint16              `yaml:"admin_port"`
 	Logging    LoggingConfig       `yaml:"logging,omitempty"`
+	RateLimit  RateLimitConfig     `yaml:"rate_limit,omitempty"`
+	Resolution ResolutionConfig    `yaml:"resolution,omitempty"`
 	Domains    []AliasDomainConfig `yaml:"domains"`
 	Tokens     []TokenConfig       `yaml:"tokens"`
 }
@@ -30,6 +32,8 @@ func (c *Config) Clone() *Config {
 		PublicPort: c.PublicPort,
 		AdminPort:  c.AdminPort,
 		Logging:    c.Logging,
+		RateLimit:  c.RateLimit.Clone(),
+		Resolution: c.Resolution.Clone(),
 		Domains:    make([]AliasDomainConfig, len(c.Domains)),
 		Tokens:     make([]TokenConfig, len(c.Tokens)),
 	}
@@ -48,6 +52,21 @@ func (c *Config) Normalize(path string) {
 		c.Logging.Level = "info"
 	} else {
 		c.Logging.Level = strings.ToLower(strings.TrimSpace(c.Logging.Level))
+	}
+	if c.RateLimit.RequestsPerMinute <= 0 {
+		c.RateLimit.RequestsPerMinute = 60
+	}
+	if c.RateLimit.Burst <= 0 {
+		c.RateLimit.Burst = 10
+	}
+	if c.Resolution.TTLSeconds <= 0 {
+		c.Resolution.TTLSeconds = 60
+	}
+	if c.Resolution.ClientIdentity.Strategy == "" {
+		c.Resolution.ClientIdentity.Strategy = ClientIdentityStrategyXFF
+	}
+	if strings.TrimSpace(c.Resolution.ClientIdentity.Header) == "" {
+		c.Resolution.ClientIdentity.Header = "X-Forwarded-For"
 	}
 	triggerSave := false
 	// Normalize case for stable matching across requests.
@@ -85,6 +104,25 @@ func (c *Config) Validate() error {
 	}
 	if _, ok := parseLogLevel(c.Logging.Level); !ok {
 		return fmt.Errorf("logging.level must be one of: debug, info, warn, error")
+	}
+	if c.RateLimit.EnabledOrDefault() {
+		if c.RateLimit.RequestsPerMinute <= 0 {
+			return fmt.Errorf("rate_limit.requests_per_minute must be > 0")
+		}
+		if c.RateLimit.Burst <= 0 {
+			return fmt.Errorf("rate_limit.burst must be > 0")
+		}
+	}
+	if c.Resolution.TTLSeconds <= 0 {
+		return fmt.Errorf("resolution.ttl_seconds must be > 0")
+	}
+	switch c.Resolution.ClientIdentity.Strategy {
+	case ClientIdentityStrategyRemoteAddr, ClientIdentityStrategyXFF, ClientIdentityStrategyXFFUA, ClientIdentityStrategyHeader, ClientIdentityStrategyHeaderUA:
+	default:
+		return fmt.Errorf("resolution.client_identity.strategy must be one of: remote_addr, xff, xff_ua, header, header_ua")
+	}
+	if (c.Resolution.ClientIdentity.Strategy == ClientIdentityStrategyHeader || c.Resolution.ClientIdentity.Strategy == ClientIdentityStrategyHeaderUA) && strings.TrimSpace(c.Resolution.ClientIdentity.Header) == "" {
+		return fmt.Errorf("resolution.client_identity.header is required when strategy is header or header_ua")
 	}
 	if len(c.Domains) == 0 {
 		return fmt.Errorf("at least one domain is required")
@@ -136,6 +174,44 @@ type AliasDomainConfig struct {
 
 type LoggingConfig struct {
 	Level string `yaml:"level"`
+}
+
+type RateLimitConfig struct {
+	Enabled           *bool `yaml:"enabled,omitempty"`
+	RequestsPerMinute int   `yaml:"requests_per_minute,omitempty"`
+	Burst             int   `yaml:"burst,omitempty"`
+}
+
+type ResolutionConfig struct {
+	TTLSeconds     int                  `yaml:"ttl_seconds,omitempty"`
+	ClientIdentity ClientIdentityConfig `yaml:"client_identity,omitempty"`
+}
+
+func (r ResolutionConfig) Clone() ResolutionConfig {
+	return ResolutionConfig{
+		TTLSeconds:     r.TTLSeconds,
+		ClientIdentity: r.ClientIdentity,
+	}
+}
+
+func (r RateLimitConfig) Clone() RateLimitConfig {
+	var enabled *bool
+	if r.Enabled != nil {
+		v := *r.Enabled
+		enabled = &v
+	}
+	return RateLimitConfig{
+		Enabled:           enabled,
+		RequestsPerMinute: r.RequestsPerMinute,
+		Burst:             r.Burst,
+	}
+}
+
+func (r RateLimitConfig) EnabledOrDefault() bool {
+	if r.Enabled == nil {
+		return true
+	}
+	return *r.Enabled
 }
 
 func (a AliasDomainConfig) Clone() AliasDomainConfig {
@@ -218,6 +294,10 @@ type TokenEndpointConfig struct {
 	Token           string            `yaml:"token,omitempty"`
 	Username        string            `yaml:"username,omitempty"`
 	Password        string            `yaml:"password,omitempty"`
+}
+
+func boolPtr(v bool) *bool {
+	return &v
 }
 
 func LoadOrCreateConfig(path string, defaultCfg *Config) (*Config, error) {

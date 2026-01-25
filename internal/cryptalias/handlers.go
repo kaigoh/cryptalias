@@ -2,6 +2,7 @@ package cryptalias
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -74,7 +75,7 @@ func JWKSKeysHandler(store *ConfigStore) http.HandlerFunc {
 	}
 }
 
-func AliasResolverHandler(store *ConfigStore) http.HandlerFunc {
+func AliasResolverHandler(store *ConfigStore, resolver walletResolver) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ticker := r.PathValue("ticker")
 		rawAlias := r.PathValue("alias")
@@ -88,12 +89,21 @@ func AliasResolverHandler(store *ConfigStore) http.HandlerFunc {
 		}
 
 		c := store.Get()
+		identity := newClientIdentity(c.Resolution.ClientIdentity)
+		clientKey := identity.Key(r)
+		ctx := withClientKey(r.Context(), clientKey)
 
-		alias, err := ParseAlias(rawAlias, ticker, c)
+		alias, err := ResolveAlias(ctx, rawAlias, ticker, c, resolver)
 		if err != nil {
-			slog.Warn("resolve alias not found", "ticker", ticker, "alias", rawAlias, "error", err)
-			w.WriteHeader(http.StatusNotFound)
-			fmt.Fprintf(w, "404 %s", err.Error())
+			if errors.Is(err, ErrAliasNotFound) {
+				slog.Warn("resolve alias not found", "ticker", ticker, "alias", rawAlias, "client", clientKey)
+				w.WriteHeader(http.StatusNotFound)
+				fmt.Fprintf(w, "404 %s", ErrAliasNotFound.Error())
+				return
+			}
+			slog.Error("resolve failed", "ticker", ticker, "alias", rawAlias, "client", clientKey, "error", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprintf(w, "500 %s", err.Error())
 			return
 		}
 
