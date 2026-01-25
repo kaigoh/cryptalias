@@ -15,13 +15,11 @@ RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/cryptal
 FROM alpine:3.20
 WORKDIR /app
 
-RUN apk add --no-cache ca-certificates && \
-    adduser -D -H -u 10001 appuser
+RUN apk add --no-cache ca-certificates
 
 COPY --from=build /out/cryptalias /app/cryptalias
 
 EXPOSE 8080
-USER appuser
 
 ENTRYPOINT ["/app/cryptalias"]
 CMD ["/config/config.yml"]
