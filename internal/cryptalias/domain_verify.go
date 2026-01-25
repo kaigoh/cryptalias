@@ -258,13 +258,50 @@ func checkDNSTXT(domainCfg AliasDomainConfig) error {
 	if len(records) == 0 {
 		return errors.New("no TXT records found")
 	}
-	expected := domainCfg.DNSTXTValue()
+	expectedKey := []byte(domainCfg.PublicKey)
 	for _, record := range records {
-		if strings.TrimSpace(record) == expected {
+		pub, ok := decodeDNSTXTPubKey(record)
+		if ok && bytesEqual(pub, expectedKey) {
 			return nil
 		}
 	}
+	expected := domainCfg.DNSTXTValue()
 	return fmt.Errorf("expected %q, got %q", expected, strings.Join(records, ", "))
+}
+
+func decodeDNSTXTPubKey(record string) ([]byte, bool) {
+	s := strings.TrimSpace(record)
+	if s == "" {
+		return nil, false
+	}
+	// Some providers return multiple values in a single record separated by commas.
+	for _, part := range strings.Split(s, ",") {
+		part = strings.TrimSpace(part)
+		part = strings.TrimPrefix(part, "pubkey=")
+		if pub, ok := decodeBase64Key(part); ok {
+			return pub, true
+		}
+	}
+	return nil, false
+}
+
+func decodeBase64Key(s string) ([]byte, bool) {
+	if s == "" {
+		return nil, false
+	}
+	if pub, err := base64.StdEncoding.DecodeString(s); err == nil {
+		return pub, true
+	}
+	if pub, err := base64.RawStdEncoding.DecodeString(s); err == nil {
+		return pub, true
+	}
+	if pub, err := base64.URLEncoding.DecodeString(s); err == nil {
+		return pub, true
+	}
+	if pub, err := base64.RawURLEncoding.DecodeString(s); err == nil {
+		return pub, true
+	}
+	return nil, false
 }
 
 func bytesEqual(a, b []byte) bool {

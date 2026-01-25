@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/ed25519"
 	"crypto/rand"
+	"encoding/base64"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -89,6 +90,21 @@ func TestAliasResolverHandlerGatesUnhealthyDomain(t *testing.T) {
 	}
 	if resolver.called {
 		t.Fatalf("expected resolver not to be called when domain is unhealthy")
+	}
+}
+
+func TestCheckDNSTXTAcceptsBase64URLWithoutPrefix(t *testing.T) {
+	store, _ := newTestStore(t)
+	domain := store.Get().Domains[0]
+
+	origLookupTXT := lookupTXT
+	lookupTXT = func(string) ([]string, error) {
+		return []string{base64.RawURLEncoding.EncodeToString(domain.PublicKey)}, nil
+	}
+	t.Cleanup(func() { lookupTXT = origLookupTXT })
+
+	if err := checkDNSTXT(domain); err != nil {
+		t.Fatalf("expected dns txt check to pass, got: %v", err)
 	}
 }
 
