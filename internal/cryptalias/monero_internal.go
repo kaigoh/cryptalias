@@ -2,7 +2,6 @@ package cryptalias
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
 	"net"
 	"net/http"
@@ -11,6 +10,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/gabstv/httpdigest"
 	cryptaliasv1 "github.com/kaigoh/cryptalias/proto/cryptalias/v1"
 	"gitlab.com/moneropay/go-monero/walletrpc"
 	"google.golang.org/grpc"
@@ -122,17 +122,22 @@ func (s *moneroWalletService) Health(context.Context, *cryptaliasv1.HealthReques
 }
 
 func (s *moneroWalletService) newWalletRPC(url, user, password string) *walletrpc.Client {
-	headers := map[string]string{}
+
+	// HTTP digest if we've got credentials
 	if user != "" || password != "" {
-		token := base64.StdEncoding.EncodeToString([]byte(user + ":" + password))
-		headers["Authorization"] = "Basic " + token
+		return walletrpc.New(walletrpc.Config{
+			Address: url,
+			Client: &http.Client{
+				Transport: httpdigest.New(user, password),
+				Timeout:   10 * time.Second,
+			},
+		})
 	}
 
-	client := walletrpc.New(walletrpc.Config{
-		Address:       url,
-		CustomHeaders: headers,
-		Client:        &http.Client{Timeout: 10 * time.Second},
+	return walletrpc.New(walletrpc.Config{
+		Address: url,
+		Client: &http.Client{
+			Timeout: 10 * time.Second,
+		},
 	})
-
-	return client
 }
