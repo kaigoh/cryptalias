@@ -31,6 +31,14 @@ Future direction:
 - Move alias config into a database
 - Allow third-party integrations (for example: invoice systems that create aliases automatically)
 
+## Donations
+
+If you feel like this will be useful to you, donations will be gratefully recieved to help drive future development work.
+
+Monero: `8BUwkJ4LWiJS7bHAsKxBbaR1dkxzcvMJoNqGeCcLEt42betKeFnnEEA7xEJLBNNA1ngBS4V4pTVt6g8S4XZyePsc1UH5msc`
+
+![Monero Donation QR Code](monero-donation-qrcode.png)
+
 ## Quick start mental model
 
 Your `config.yml` is the control panel. It answers three questions:
@@ -437,7 +445,7 @@ server {
 }
 ```
 
-If a domain fails these checks, Cryptalias will *stop resolving aliases for that domain* until it becomes healthy again.
+If a domain fails these checks, Cryptalias will _stop resolving aliases for that domain_ until it becomes healthy again.
 
 You can see the current state here:
 
