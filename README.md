@@ -88,6 +88,10 @@ That means you should:
 
 - create your wallet files under `./monero`, and
 - set `wallet_file:` and `wallet_password:` in `config.yml` to match
+- use the `monero-wallet-rpc` login credentials in `username:` and `password:`
+
+Monero gotcha: the wallet RPC endpoint must include `/json_rpc`, and it uses
+HTTP Digest auth (not Basic auth).
 
 ### 3) Configure the Monero daemon address
 
@@ -177,6 +181,8 @@ tokens:
       wallet_file: main
       wallet_password: change-me-wallet
 ```
+
+Important: for Monero, `address` must end with `/json_rpc`.
 
 ## Client identity (very important)
 
@@ -520,6 +526,8 @@ Monero wallet RPC errors (500s)
 - Make sure `monero-wallet-rpc` can reach a daemon
 - Make sure the wallet file exists in `./monero`
 - Make sure the RPC username/password match both compose and `config.yml`
+- Make sure the endpoint `address` ends with `/json_rpc`
+- Remember Monero uses HTTP Digest auth
 
 ## Notes on safety features
 

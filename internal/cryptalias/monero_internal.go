@@ -3,6 +3,7 @@ package cryptalias
 import (
 	"context"
 	"fmt"
+	"log"
 	"net"
 	"net/http"
 	"strings"
@@ -87,6 +88,7 @@ func (s *moneroWalletService) GetAddress(ctx context.Context, req *cryptaliasv1.
 	}
 
 	if strings.TrimSpace(ep.WalletFile) != "" {
+		log.Println(ep.WalletFile)
 		// When wallet_file is configured, open/close per request to avoid leaking
 		// state across reloads and to keep behavior explicit.
 		if err := client.OpenWallet(ctx, &walletrpc.OpenWalletRequest{
@@ -95,7 +97,7 @@ func (s *moneroWalletService) GetAddress(ctx context.Context, req *cryptaliasv1.
 		}); err != nil {
 			return nil, err
 		}
-		defer func() { _ = client.CloseWallet(ctx) }()
+		defer client.CloseWallet(ctx)
 	}
 
 	label := req.GetDomain() + ":" + req.GetAlias()
