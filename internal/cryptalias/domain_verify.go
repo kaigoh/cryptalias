@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"log/slog"
 	"net"
 	"net/http"
@@ -260,6 +261,7 @@ func checkDNSTXT(domainCfg AliasDomainConfig) error {
 	}
 	expectedKey := []byte(domainCfg.PublicKey)
 	for _, record := range records {
+		log.Println(record)
 		pub, ok := decodeDNSTXTPubKey(record)
 		if ok && bytesEqual(pub, expectedKey) {
 			return nil
