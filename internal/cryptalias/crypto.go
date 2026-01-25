@@ -2,6 +2,7 @@ package cryptalias
 
 import (
 	"crypto/ed25519"
+	"crypto/rand"
 	"encoding/base64"
 	"fmt"
 )
@@ -47,6 +48,7 @@ func decodeKeyFromYAML(unmarshal func(interface{}) error) ([]byte, error) {
 	if err := unmarshal(&raw); err != nil {
 		return nil, err
 	}
+	// Accept legacy YAML array forms while preferring base64 strings.
 	switch v := raw.(type) {
 	case nil:
 		return nil, nil
@@ -79,4 +81,13 @@ func decodeKeyFromYAML(unmarshal func(interface{}) error) ([]byte, error) {
 	default:
 		return nil, fmt.Errorf("unsupported key format %T", raw)
 	}
+}
+
+func NewNonce() (string, error) {
+	var b [16]byte
+	if _, err := rand.Read(b[:]); err != nil {
+		return "", err
+	}
+	// Hex keeps the nonce compact and URL-safe without extra encoding steps.
+	return fmt.Sprintf("%x", b[:]), nil
 }

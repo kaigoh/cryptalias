@@ -5,18 +5,21 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+
+	"github.com/lestrrat-go/jwx/v3/jwk"
 )
 
 var re = regexp.MustCompile(`^([A-Za-z0-9.-]+)(?:\+([A-Za-z0-9.-]+))?\$([A-Za-z0-9.-]+)$`)
 
 type Alias struct {
-	Alias   string
-	Tag     string // Empty if none
-	Domain  string
-	Address WalletAddress
+	Alias      string
+	Tag        string // Empty if none
+	Domain     string
+	SigningKey jwk.Key
+	Wallet     WalletAddress
 }
 
-func ParseAndCheckDomain(input string, ticker string, config *Config) (Alias, error) {
+func ParseAlias(input string, ticker string, config *Config) (Alias, error) {
 	s := strings.TrimSpace(input)
 	if s == "" {
 		return Alias{}, errors.New("empty identifier")
@@ -54,20 +57,28 @@ func ParseAndCheckDomain(input string, ticker string, config *Config) (Alias, er
 	// Validate domain
 	for _, d := range config.Domains {
 		if d.Domain == alias.Domain {
+
+			// Attach the domain signing key so the handler can produce a JWS.
+			signingKey, err := d.GetSigningJWK()
+			if err != nil {
+				return Alias{}, err
+			}
+			alias.SigningKey = signingKey
+
 			// Validate static aliases...
 			for _, a := range d.Aliases {
 				if a.Alias == alias.Alias {
 					// Check tags first...
 					for _, t := range a.Tags {
-						if t.Tag == alias.Tag && t.Address.Ticker == ts {
-							alias.Address = t.Address
+						if t.Tag == alias.Tag && t.Wallet.Ticker == ts {
+							alias.Wallet = t.Wallet
 							return alias, nil
 						}
 					}
 
 					// No match, so return the root alias if tickers match...
-					if a.Address.Ticker == ts {
-						alias.Address = a.Address
+					if a.Wallet.Ticker == ts {
+						alias.Wallet = a.Wallet
 						return alias, nil
 					}
 				}

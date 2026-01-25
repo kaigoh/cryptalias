@@ -4,7 +4,7 @@ package cryptalias.v1;
 
 option go_package = "github.com/kaigoh/cryptalias/proto/cryptalias/v1;cryptaliasv1";
 
-service AssetResolver {
+service WalletService {
   rpc GetAddress(WalletAddressRequest) returns (WalletAddressResponse);
   rpc Health(HealthRequest) returns (HealthResponse);
 }

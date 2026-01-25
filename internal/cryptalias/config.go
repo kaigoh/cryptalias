@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"strings"
 
@@ -17,6 +16,7 @@ type Config struct {
 	BaseURL    string              `yaml:"base_url"`
 	PublicPort uint16              `yaml:"public_port"`
 	AdminPort  uint16              `yaml:"admin_port"`
+	Logging    LoggingConfig       `yaml:"logging,omitempty"`
 	Domains    []AliasDomainConfig `yaml:"domains"`
 	Tokens     []TokenConfig       `yaml:"tokens"`
 }
@@ -29,6 +29,7 @@ func (c *Config) Clone() *Config {
 		BaseURL:    c.BaseURL,
 		PublicPort: c.PublicPort,
 		AdminPort:  c.AdminPort,
+		Logging:    c.Logging,
 		Domains:    make([]AliasDomainConfig, len(c.Domains)),
 		Tokens:     make([]TokenConfig, len(c.Tokens)),
 	}
@@ -43,16 +44,21 @@ func (c *Config) Clone() *Config {
 
 func (c *Config) Normalize(path string) {
 	c.BaseURL = strings.TrimSuffix(c.BaseURL, "/")
+	if strings.TrimSpace(c.Logging.Level) == "" {
+		c.Logging.Level = "info"
+	} else {
+		c.Logging.Level = strings.ToLower(strings.TrimSpace(c.Logging.Level))
+	}
 	triggerSave := false
-	// Lowercase domains, aliases, tags and tickers
+	// Normalize case for stable matching across requests.
 	for i := range c.Domains {
 		c.Domains[i].Domain = strings.ToLower(c.Domains[i].Domain)
 		for a := range c.Domains[i].Aliases {
 			c.Domains[i].Aliases[a].Alias = strings.ToLower(c.Domains[i].Aliases[a].Alias)
-			c.Domains[i].Aliases[a].Address.Ticker = strings.ToLower(c.Domains[i].Aliases[a].Address.Ticker)
+			c.Domains[i].Aliases[a].Wallet.Ticker = strings.ToLower(c.Domains[i].Aliases[a].Wallet.Ticker)
 			for t := range c.Domains[i].Aliases[a].Tags {
 				c.Domains[i].Aliases[a].Tags[t].Tag = strings.ToLower(c.Domains[i].Aliases[a].Tags[t].Tag)
-				c.Domains[i].Aliases[a].Tags[t].Address.Ticker = strings.ToLower(c.Domains[i].Aliases[a].Tags[t].Address.Ticker)
+				c.Domains[i].Aliases[a].Tags[t].Wallet.Ticker = strings.ToLower(c.Domains[i].Aliases[a].Tags[t].Wallet.Ticker)
 			}
 		}
 		if result, err := c.Domains[i].GenerateKeys(); !result && err != nil {
@@ -62,6 +68,7 @@ func (c *Config) Normalize(path string) {
 		}
 	}
 	if triggerSave {
+		// Persist generated keys so subsequent reloads are deterministic.
 		SaveConfig(path, c)
 	}
 }
@@ -75,6 +82,9 @@ func (c *Config) Validate() error {
 	}
 	if c.AdminPort == 0 {
 		return fmt.Errorf("admin_port must be set")
+	}
+	if _, ok := parseLogLevel(c.Logging.Level); !ok {
+		return fmt.Errorf("logging.level must be one of: debug, info, warn, error")
 	}
 	if len(c.Domains) == 0 {
 		return fmt.Errorf("at least one domain is required")
@@ -101,7 +111,6 @@ func (c *Config) Validate() error {
 			return fmt.Errorf("tokens[%d].endpoint.type is required (internal or external)", i)
 		}
 		if t.Endpoint.EndpointAddress == "" {
-			log.Println(t)
 			return fmt.Errorf("tokens[%d].endpoint.address is required", i)
 		}
 	}
@@ -123,6 +132,10 @@ type AliasDomainConfig struct {
 	PrivateKey PrivateKey    `yaml:"private_key"`
 	PublicKey  PublicKey     `yaml:"public_key"`
 	Aliases    []WalletAlias `yaml:"aliases,omitempty"`
+}
+
+type LoggingConfig struct {
+	Level string `yaml:"level"`
 }
 
 func (a AliasDomainConfig) Clone() AliasDomainConfig {
@@ -152,6 +165,20 @@ func (a *AliasDomainConfig) GenerateKeys() (bool, error) {
 
 func (a *AliasDomainConfig) GetJWK() (jwk.Key, error) {
 	key, err := jwk.Import(ed25519.PublicKey(a.PublicKey))
+	if err != nil {
+		return nil, err
+	}
+
+	// Set kid to the Cryptalias domain
+	if err := key.Set(jwk.KeyIDKey, a.Domain); err != nil {
+		return nil, fmt.Errorf("set kid: %w", err)
+	}
+
+	return key, nil
+}
+
+func (a *AliasDomainConfig) GetSigningJWK() (jwk.Key, error) {
+	key, err := jwk.Import(ed25519.PrivateKey(a.PrivateKey))
 	if err != nil {
 		return nil, err
 	}

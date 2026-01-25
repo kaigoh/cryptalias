@@ -2,6 +2,7 @@ package cryptalias
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"sync"
@@ -37,6 +38,7 @@ func (s *ConfigStore) Set(cfg *Config) error {
 	s.mu.Lock()
 	s.cfg = cfg.Clone()
 	s.mu.Unlock()
+	slog.Debug("config applied in memory", "path", s.path)
 	return nil
 }
 
@@ -54,6 +56,7 @@ func (s *ConfigStore) Save(cfg *Config) error {
 		return err
 	}
 	s.cfg = cfg.Clone()
+	slog.Info("config saved", "path", s.path)
 	return nil
 }
 
@@ -66,7 +69,11 @@ func (s *ConfigStore) SaveCurrent() error {
 	if err := s.cfg.Validate(); err != nil {
 		return err
 	}
-	return SaveConfig(s.path, s.cfg)
+	if err := SaveConfig(s.path, s.cfg); err != nil {
+		return err
+	}
+	slog.Info("config saved", "path", s.path)
+	return nil
 }
 
 func (s *ConfigStore) Update(fn func(*Config) error) error {
@@ -75,6 +82,7 @@ func (s *ConfigStore) Update(fn func(*Config) error) error {
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	// Work on a clone so callers cannot mutate shared state mid-update.
 	next := s.cfg.Clone()
 	if err := fn(next); err != nil {
 		return err
@@ -87,11 +95,13 @@ func (s *ConfigStore) Update(fn func(*Config) error) error {
 		return err
 	}
 	s.cfg = next
+	slog.Info("config updated", "path", s.path)
 	return nil
 }
 
 func saveConfigAtomic(path string, data []byte) error {
 	dir := filepath.Dir(path)
+	// Write to a temp file in the same directory so rename is atomic.
 	tmp, err := os.CreateTemp(dir, ".cryptalias.config-*.yml")
 	if err != nil {
 		return err
@@ -117,5 +127,6 @@ func saveConfigAtomic(path string, data []byte) error {
 		return err
 	}
 
+	// Atomic replace prevents readers from observing partial writes.
 	return os.Rename(tmpName, path)
 }

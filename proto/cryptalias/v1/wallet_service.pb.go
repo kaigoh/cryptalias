@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.36.11
 // 	protoc        v6.33.1
-// source: proto/cryptalias/v1/asset_resolver.proto
+// source: proto/cryptalias/v1/wallet_service.proto
 
 package cryptaliasv1
 
@@ -33,7 +33,7 @@ type WalletAddressRequest struct {
 
 func (x *WalletAddressRequest) Reset() {
 	*x = WalletAddressRequest{}
-	mi := &file_proto_cryptalias_v1_asset_resolver_proto_msgTypes[0]
+	mi := &file_proto_cryptalias_v1_wallet_service_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -45,7 +45,7 @@ func (x *WalletAddressRequest) String() string {
 func (*WalletAddressRequest) ProtoMessage() {}
 
 func (x *WalletAddressRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_cryptalias_v1_asset_resolver_proto_msgTypes[0]
+	mi := &file_proto_cryptalias_v1_wallet_service_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -58,7 +58,7 @@ func (x *WalletAddressRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WalletAddressRequest.ProtoReflect.Descriptor instead.
 func (*WalletAddressRequest) Descriptor() ([]byte, []int) {
-	return file_proto_cryptalias_v1_asset_resolver_proto_rawDescGZIP(), []int{0}
+	return file_proto_cryptalias_v1_wallet_service_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *WalletAddressRequest) GetTicker() string {
@@ -98,7 +98,7 @@ type WalletAddressResponse struct {
 
 func (x *WalletAddressResponse) Reset() {
 	*x = WalletAddressResponse{}
-	mi := &file_proto_cryptalias_v1_asset_resolver_proto_msgTypes[1]
+	mi := &file_proto_cryptalias_v1_wallet_service_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -110,7 +110,7 @@ func (x *WalletAddressResponse) String() string {
 func (*WalletAddressResponse) ProtoMessage() {}
 
 func (x *WalletAddressResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_cryptalias_v1_asset_resolver_proto_msgTypes[1]
+	mi := &file_proto_cryptalias_v1_wallet_service_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -123,7 +123,7 @@ func (x *WalletAddressResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WalletAddressResponse.ProtoReflect.Descriptor instead.
 func (*WalletAddressResponse) Descriptor() ([]byte, []int) {
-	return file_proto_cryptalias_v1_asset_resolver_proto_rawDescGZIP(), []int{1}
+	return file_proto_cryptalias_v1_wallet_service_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *WalletAddressResponse) GetAddress() string {
@@ -141,7 +141,7 @@ type HealthRequest struct {
 
 func (x *HealthRequest) Reset() {
 	*x = HealthRequest{}
-	mi := &file_proto_cryptalias_v1_asset_resolver_proto_msgTypes[2]
+	mi := &file_proto_cryptalias_v1_wallet_service_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -153,7 +153,7 @@ func (x *HealthRequest) String() string {
 func (*HealthRequest) ProtoMessage() {}
 
 func (x *HealthRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_cryptalias_v1_asset_resolver_proto_msgTypes[2]
+	mi := &file_proto_cryptalias_v1_wallet_service_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -166,7 +166,7 @@ func (x *HealthRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HealthRequest.ProtoReflect.Descriptor instead.
 func (*HealthRequest) Descriptor() ([]byte, []int) {
-	return file_proto_cryptalias_v1_asset_resolver_proto_rawDescGZIP(), []int{2}
+	return file_proto_cryptalias_v1_wallet_service_proto_rawDescGZIP(), []int{2}
 }
 
 type HealthResponse struct {
@@ -179,7 +179,7 @@ type HealthResponse struct {
 
 func (x *HealthResponse) Reset() {
 	*x = HealthResponse{}
-	mi := &file_proto_cryptalias_v1_asset_resolver_proto_msgTypes[3]
+	mi := &file_proto_cryptalias_v1_wallet_service_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -191,7 +191,7 @@ func (x *HealthResponse) String() string {
 func (*HealthResponse) ProtoMessage() {}
 
 func (x *HealthResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_cryptalias_v1_asset_resolver_proto_msgTypes[3]
+	mi := &file_proto_cryptalias_v1_wallet_service_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -204,7 +204,7 @@ func (x *HealthResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HealthResponse.ProtoReflect.Descriptor instead.
 func (*HealthResponse) Descriptor() ([]byte, []int) {
-	return file_proto_cryptalias_v1_asset_resolver_proto_rawDescGZIP(), []int{3}
+	return file_proto_cryptalias_v1_wallet_service_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *HealthResponse) GetOk() bool {
@@ -221,11 +221,11 @@ func (x *HealthResponse) GetMessage() string {
 	return ""
 }
 
-var File_proto_cryptalias_v1_asset_resolver_proto protoreflect.FileDescriptor
+var File_proto_cryptalias_v1_wallet_service_proto protoreflect.FileDescriptor
 
-const file_proto_cryptalias_v1_asset_resolver_proto_rawDesc = "" +
+const file_proto_cryptalias_v1_wallet_service_proto_rawDesc = "" +
 	"\n" +
-	"(proto/cryptalias/v1/asset_resolver.proto\x12\rcryptalias.v1\"n\n" +
+	"(proto/cryptalias/v1/wallet_service.proto\x12\rcryptalias.v1\"n\n" +
 	"\x14WalletAddressRequest\x12\x16\n" +
 	"\x06ticker\x18\x01 \x01(\tR\x06ticker\x12\x14\n" +
 	"\x05alias\x18\x02 \x01(\tR\x05alias\x12\x10\n" +
@@ -237,35 +237,35 @@ const file_proto_cryptalias_v1_asset_resolver_proto_rawDesc = "" +
 	"\x0eHealthResponse\x12\x0e\n" +
 	"\x02ok\x18\x01 \x01(\bR\x02ok\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage2\xaf\x01\n" +
-	"\rAssetResolver\x12W\n" +
+	"\rWalletService\x12W\n" +
 	"\n" +
 	"GetAddress\x12#.cryptalias.v1.WalletAddressRequest\x1a$.cryptalias.v1.WalletAddressResponse\x12E\n" +
 	"\x06Health\x12\x1c.cryptalias.v1.HealthRequest\x1a\x1d.cryptalias.v1.HealthResponseB?Z=github.com/kaigoh/cryptalias/proto/cryptalias/v1;cryptaliasv1b\x06proto3"
 
 var (
-	file_proto_cryptalias_v1_asset_resolver_proto_rawDescOnce sync.Once
-	file_proto_cryptalias_v1_asset_resolver_proto_rawDescData []byte
+	file_proto_cryptalias_v1_wallet_service_proto_rawDescOnce sync.Once
+	file_proto_cryptalias_v1_wallet_service_proto_rawDescData []byte
 )
 
-func file_proto_cryptalias_v1_asset_resolver_proto_rawDescGZIP() []byte {
-	file_proto_cryptalias_v1_asset_resolver_proto_rawDescOnce.Do(func() {
-		file_proto_cryptalias_v1_asset_resolver_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_proto_cryptalias_v1_asset_resolver_proto_rawDesc), len(file_proto_cryptalias_v1_asset_resolver_proto_rawDesc)))
+func file_proto_cryptalias_v1_wallet_service_proto_rawDescGZIP() []byte {
+	file_proto_cryptalias_v1_wallet_service_proto_rawDescOnce.Do(func() {
+		file_proto_cryptalias_v1_wallet_service_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_proto_cryptalias_v1_wallet_service_proto_rawDesc), len(file_proto_cryptalias_v1_wallet_service_proto_rawDesc)))
 	})
-	return file_proto_cryptalias_v1_asset_resolver_proto_rawDescData
+	return file_proto_cryptalias_v1_wallet_service_proto_rawDescData
 }
 
-var file_proto_cryptalias_v1_asset_resolver_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
-var file_proto_cryptalias_v1_asset_resolver_proto_goTypes = []any{
+var file_proto_cryptalias_v1_wallet_service_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_proto_cryptalias_v1_wallet_service_proto_goTypes = []any{
 	(*WalletAddressRequest)(nil),  // 0: cryptalias.v1.WalletAddressRequest
 	(*WalletAddressResponse)(nil), // 1: cryptalias.v1.WalletAddressResponse
 	(*HealthRequest)(nil),         // 2: cryptalias.v1.HealthRequest
 	(*HealthResponse)(nil),        // 3: cryptalias.v1.HealthResponse
 }
-var file_proto_cryptalias_v1_asset_resolver_proto_depIdxs = []int32{
-	0, // 0: cryptalias.v1.AssetResolver.GetAddress:input_type -> cryptalias.v1.WalletAddressRequest
-	2, // 1: cryptalias.v1.AssetResolver.Health:input_type -> cryptalias.v1.HealthRequest
-	1, // 2: cryptalias.v1.AssetResolver.GetAddress:output_type -> cryptalias.v1.WalletAddressResponse
-	3, // 3: cryptalias.v1.AssetResolver.Health:output_type -> cryptalias.v1.HealthResponse
+var file_proto_cryptalias_v1_wallet_service_proto_depIdxs = []int32{
+	0, // 0: cryptalias.v1.WalletService.GetAddress:input_type -> cryptalias.v1.WalletAddressRequest
+	2, // 1: cryptalias.v1.WalletService.Health:input_type -> cryptalias.v1.HealthRequest
+	1, // 2: cryptalias.v1.WalletService.GetAddress:output_type -> cryptalias.v1.WalletAddressResponse
+	3, // 3: cryptalias.v1.WalletService.Health:output_type -> cryptalias.v1.HealthResponse
 	2, // [2:4] is the sub-list for method output_type
 	0, // [0:2] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
@@ -273,26 +273,26 @@ var file_proto_cryptalias_v1_asset_resolver_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for field type_name
 }
 
-func init() { file_proto_cryptalias_v1_asset_resolver_proto_init() }
-func file_proto_cryptalias_v1_asset_resolver_proto_init() {
-	if File_proto_cryptalias_v1_asset_resolver_proto != nil {
+func init() { file_proto_cryptalias_v1_wallet_service_proto_init() }
+func file_proto_cryptalias_v1_wallet_service_proto_init() {
+	if File_proto_cryptalias_v1_wallet_service_proto != nil {
 		return
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_cryptalias_v1_asset_resolver_proto_rawDesc), len(file_proto_cryptalias_v1_asset_resolver_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_cryptalias_v1_wallet_service_proto_rawDesc), len(file_proto_cryptalias_v1_wallet_service_proto_rawDesc)),
 			NumEnums:      0,
 			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
-		GoTypes:           file_proto_cryptalias_v1_asset_resolver_proto_goTypes,
-		DependencyIndexes: file_proto_cryptalias_v1_asset_resolver_proto_depIdxs,
-		MessageInfos:      file_proto_cryptalias_v1_asset_resolver_proto_msgTypes,
+		GoTypes:           file_proto_cryptalias_v1_wallet_service_proto_goTypes,
+		DependencyIndexes: file_proto_cryptalias_v1_wallet_service_proto_depIdxs,
+		MessageInfos:      file_proto_cryptalias_v1_wallet_service_proto_msgTypes,
 	}.Build()
-	File_proto_cryptalias_v1_asset_resolver_proto = out.File
-	file_proto_cryptalias_v1_asset_resolver_proto_goTypes = nil
-	file_proto_cryptalias_v1_asset_resolver_proto_depIdxs = nil
+	File_proto_cryptalias_v1_wallet_service_proto = out.File
+	file_proto_cryptalias_v1_wallet_service_proto_goTypes = nil
+	file_proto_cryptalias_v1_wallet_service_proto_depIdxs = nil
 }

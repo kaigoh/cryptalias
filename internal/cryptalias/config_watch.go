@@ -1,7 +1,7 @@
 package cryptalias
 
 import (
-	"log"
+	"log/slog"
 	"path/filepath"
 
 	"github.com/fsnotify/fsnotify"
@@ -18,18 +18,21 @@ func WatchConfigFile(path string, store *ConfigStore) (*fsnotify.Watcher, error)
 		_ = watcher.Close()
 		return nil, err
 	}
+	// Watch both the directory and the file to survive atomic renames.
 	_ = watcher.Add(path)
 
 	cleanPath := filepath.Clean(path)
 	baseName := filepath.Base(cleanPath)
 
 	go func() {
+		slog.Debug("config watcher loop started", "path", cleanPath)
 		for {
 			select {
 			case event, ok := <-watcher.Events:
 				if !ok {
 					return
 				}
+				slog.Debug("config watcher event", "op", event.Op.String(), "name", event.Name)
 
 				affected := filepath.Clean(event.Name) == cleanPath || filepath.Base(event.Name) == baseName
 				if !affected {
@@ -37,33 +40,37 @@ func WatchConfigFile(path string, store *ConfigStore) (*fsnotify.Watcher, error)
 				}
 
 				if event.Has(fsnotify.Remove) || event.Has(fsnotify.Rename) {
+					// Atomic saves replace the file; re-add the watch on the new inode.
 					_ = watcher.Remove(path)
 					_ = watcher.Add(path)
 				}
 
 				if event.Has(fsnotify.Write) || event.Has(fsnotify.Create) || event.Has(fsnotify.Rename) || event.Has(fsnotify.Remove) {
+					// Load -> validate -> apply keeps the running config consistent.
 					cfg, err := LoadConfig(path)
 					if err != nil {
-						log.Printf("config reload failed: %v", err)
+						slog.Error("config reload failed", "path", path, "error", err)
 						continue
 					}
 					cfg.Normalize(path)
 					if err := cfg.Validate(); err != nil {
-						log.Printf("config reload rejected: %v", err)
+						slog.Warn("config reload rejected", "path", path, "error", err)
 						continue
 					}
 					if err := store.Set(cfg); err != nil {
-						log.Printf("config apply failed: %v", err)
+						slog.Error("config apply failed", "path", path, "error", err)
 						continue
 					}
-					log.Printf("config reloaded from disk")
+					// Re-apply logging settings on successful reload.
+					InitLogger(cfg.Logging)
+					slog.Info("config reloaded from disk", "path", path)
 				}
 
 			case err, ok := <-watcher.Errors:
 				if !ok {
 					return
 				}
-				log.Printf("config watcher error: %v", err)
+				slog.Error("config watcher error", "path", path, "error", err)
 			}
 		}
 	}()

@@ -2,7 +2,7 @@ package cryptalias
 
 import (
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 
 	"github.com/99designs/gqlgen/graphql/handler"
@@ -20,8 +20,11 @@ var defaultConfig = &Config{
 	BaseURL:    "http://127.0.0.1:8080",
 	PublicPort: 8080,
 	AdminPort:  9090,
+	Logging: LoggingConfig{
+		Level: "info",
+	},
 	Domains: []AliasDomainConfig{
-		{Domain: "127.0.0.1:8080"},
+		{Domain: "127.0.0.1"},
 	},
 	Tokens: []TokenConfig{
 		{
@@ -47,12 +50,15 @@ func Run(configPath string) error {
 	if err := cfg.Validate(); err != nil {
 		return err
 	}
-	fmt.Println("Loaded config for:", cfg.BaseURL)
+	InitLogger(cfg.Logging)
+	slog.Info("config loaded", "path", configPath, "base_url", cfg.BaseURL)
 
 	store := NewConfigStore(configPath, cfg)
 	if _, err := WatchConfigFile(configPath, store); err != nil {
+		slog.Error("config watcher failed to start", "path", configPath, "error", err)
 		return err
 	}
+	slog.Info("config watcher started", "path", configPath)
 
 	srv := handler.New(graph.NewExecutableSchema(graph.Config{Resolvers: &graph.Resolver{}}))
 
@@ -73,14 +79,15 @@ func Run(configPath string) error {
 
 	// Public endpoints
 	publicMux := http.NewServeMux()
-	publicMux.HandleFunc("/.well-known/cryptalias", WellKnownHandler(store))
-	publicMux.HandleFunc("/_cryptalias/keys", JWKSKeysHandler(store))
+	publicMux.HandleFunc("GET /.well-known/cryptalias", WellKnownHandler(store))
+	publicMux.HandleFunc("GET /_cryptalias/keys", JWKSKeysHandler(store))
+	publicMux.HandleFunc("GET /_cryptalias/resolve/{ticker}/{alias}", AliasResolverHandler(store))
 
 	adminAddr := fmt.Sprintf(":%d", cfg.AdminPort)
 	publicAddr := fmt.Sprintf(":%d", cfg.PublicPort)
 
-	log.Printf("public server listening on http://127.0.0.1:%d/", cfg.PublicPort)
-	log.Printf("private GraphQL playground on http://127.0.0.1:%d/", cfg.AdminPort)
+	slog.Info("public server listening", "addr", publicAddr, "base_url", cfg.BaseURL)
+	slog.Info("private GraphQL playground listening", "addr", adminAddr, "path", "/query")
 
 	errCh := make(chan error, 2)
 	go func() {
@@ -90,5 +97,7 @@ func Run(configPath string) error {
 		errCh <- http.ListenAndServe(adminAddr, adminMux)
 	}()
 
-	return <-errCh
+	err = <-errCh
+	slog.Error("server exited", "error", err)
+	return err
 }
