@@ -37,7 +37,7 @@ If you feel like this will be useful to you, donations will be gratefully reciev
 
 Monero: `8BUwkJ4LWiJS7bHAsKxBbaR1dkxzcvMJoNqGeCcLEt42betKeFnnEEA7xEJLBNNA1ngBS4V4pTVt6g8S4XZyePsc1UH5msc`
 
-![Monero Donation QR Code](monero-donation-qrcode.png)
+![Monero Donation QR Code](monero-donation-qrcode.png | width=200)
 
 ## Quick start mental model
 
