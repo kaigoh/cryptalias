@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/lestrrat-go/jwx/v3/jwa"
-	"github.com/lestrrat-go/jwx/v3/jwk"
 	"github.com/lestrrat-go/jwx/v3/jws"
 )
 
@@ -42,31 +41,59 @@ func TestWellKnownHandler(t *testing.T) {
 	}
 }
 
-func TestJWKSKeysHandler(t *testing.T) {
+func TestWellKnownKeysHandler(t *testing.T) {
 	store, _ := newTestStore(t)
-	req := httptest.NewRequest(http.MethodGet, "/_cryptalias/keys", nil)
+	req := httptest.NewRequest(http.MethodGet, "/.well-known/cryptalias/keys", nil)
+	req.Host = "127.0.0.1"
 	rr := httptest.NewRecorder()
 
-	JWKSKeysHandler(store).ServeHTTP(rr, req)
+	WellKnownKeysHandler(store).ServeHTTP(rr, req)
 
 	if rr.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rr.Code, rr.Body.String())
 	}
+	if ct := rr.Header().Get("Content-Type"); ct != "application/json" {
+		t.Fatalf("expected application/json content-type, got %q", ct)
+	}
+	var body struct {
+		Domain string `json:"domain"`
+		Key    any    `json:"key"`
+	}
+	if err := json.Unmarshal(rr.Body.Bytes(), &body); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if body.Domain != "127.0.0.1" || body.Key == nil {
+		t.Fatalf("unexpected body: %+v", body)
+	}
+}
 
-	set, err := jwk.Parse(rr.Body.Bytes())
-	if err != nil {
-		t.Fatalf("parse jwk set: %v", err)
+func TestWellKnownStatusHandler(t *testing.T) {
+	store, _ := newTestStore(t)
+	statuses := NewDomainStatusStore(store.Get())
+	statuses.Update(DomainStatus{
+		Domain:      "127.0.0.1",
+		Healthy:     false,
+		Message:     "dns txt mismatch",
+		LastChecked: time.Now().UTC(),
+	})
+	req := httptest.NewRequest(http.MethodGet, "/.well-known/cryptalias/status", nil)
+	req.Host = "127.0.0.1"
+	rr := httptest.NewRecorder()
+
+	WellKnownStatusHandler(store, statuses).ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rr.Code, rr.Body.String())
 	}
-	if set.Len() != 1 {
-		t.Fatalf("expected 1 key, got %d", set.Len())
+	var body struct {
+		Healthy bool         `json:"healthy"`
+		Domain  DomainStatus `json:"domain"`
 	}
-	key, ok := set.Key(0)
-	if !ok {
-		t.Fatalf("expected key at index 0")
+	if err := json.Unmarshal(rr.Body.Bytes(), &body); err != nil {
+		t.Fatalf("decode response: %v", err)
 	}
-	kid, ok := key.KeyID()
-	if !ok || kid != "127.0.0.1" {
-		t.Fatalf("expected kid 127.0.0.1, got %q (ok=%v)", kid, ok)
+	if body.Healthy || body.Domain.Domain != "127.0.0.1" {
+		t.Fatalf("unexpected body: %+v", body)
 	}
 }
 

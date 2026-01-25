@@ -105,7 +105,7 @@ func (v *domainVerifier) verifyDomain(ctx context.Context, cfg *Config, domainCf
 
 	if err := v.checkJWKS(ctx, base, domainCfg); err != nil {
 		status.Healthy = false
-		status.Message = fmt.Sprintf("jwks check failed: %v", err)
+		status.Message = fmt.Sprintf("domain keys check failed: %v", err)
 		return status
 	}
 	status.JWKSOK = true
@@ -160,33 +160,27 @@ func (v *domainVerifier) checkWellKnown(ctx context.Context, base *url.URL, doma
 }
 
 func (v *domainVerifier) checkJWKS(ctx context.Context, base *url.URL, domainCfg AliasDomainConfig) error {
-	body, err := v.getWithHost(ctx, base, "/_cryptalias/keys", domainCfg.Domain)
+	body, err := v.getWithHost(ctx, base, "/.well-known/cryptalias/keys", domainCfg.Domain)
 	if err != nil {
 		return err
 	}
 
 	var raw struct {
-		Keys []json.RawMessage `json:"keys"`
+		Domain string          `json:"domain"`
+		Key    json.RawMessage `json:"key"`
 	}
 	if err := json.Unmarshal(body, &raw); err != nil {
 		return fmt.Errorf("decode response: %w", err)
 	}
-	if len(raw.Keys) == 0 {
-		return errors.New("no keys returned")
+	if !strings.EqualFold(strings.TrimSpace(raw.Domain), domainCfg.Domain) {
+		return fmt.Errorf("domain mismatch: got %q", raw.Domain)
 	}
 
-	for _, item := range raw.Keys {
-		key, err := jwk.ParseKey(item)
-		if err != nil {
-			continue
-		}
-		kid, ok := key.KeyID()
-		if !ok || !strings.EqualFold(kid, domainCfg.Domain) {
-			continue
-		}
-		return ensureKeyMatchesDomain(key, domainCfg)
+	key, err := jwk.ParseKey(raw.Key)
+	if err != nil {
+		return fmt.Errorf("parse key: %w", err)
 	}
-	return fmt.Errorf("no jwks key found for domain %s", domainCfg.Domain)
+	return ensureKeyMatchesDomain(key, domainCfg)
 }
 
 func (v *domainVerifier) getWithHost(ctx context.Context, base *url.URL, path, host string) ([]byte, error) {

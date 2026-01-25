@@ -360,7 +360,7 @@ Cryptalias now checks your domains routinely, like a client would.
 It verifies things like:
 
 - `/.well-known/cryptalias` responds correctly
-- `/_cryptalias/keys` contains the right key for the domain
+- `/.well-known/cryptalias/keys` serves the right key for the domain
 - DNS resolves
 - The `_cryptalias` TXT record matches your configured public key
 
@@ -390,7 +390,7 @@ labels:
   - traefik.enable=true
 
   # 1) Discovery on the resolved domain
-  - traefik.http.routers.cryptalias-wellknown.rule=Host(`example.com`) && Path(`/.well-known/cryptalias`)
+  - traefik.http.routers.cryptalias-wellknown.rule=Host(`example.com`) && PathPrefix(`/.well-known/cryptalias`)
   - traefik.http.routers.cryptalias-wellknown.entrypoints=websecure
   - traefik.http.routers.cryptalias-wellknown.tls=true
   - traefik.http.routers.cryptalias-wellknown.service=cryptalias-svc
@@ -412,6 +412,12 @@ example.com {
   handle /.well-known/cryptalias {
     reverse_proxy cryptalias:8080
   }
+  handle /.well-known/cryptalias/keys {
+    reverse_proxy cryptalias:8080
+  }
+  handle /.well-known/cryptalias/status {
+    reverse_proxy cryptalias:8080
+  }
 }
 
 cryptalias.example.com {
@@ -426,6 +432,20 @@ server {
   server_name example.com;
 
   location = /.well-known/cryptalias {
+    proxy_pass http://cryptalias:8080;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+  }
+
+  location = /.well-known/cryptalias/keys {
+    proxy_pass http://cryptalias:8080;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+  }
+
+  location = /.well-known/cryptalias/status {
     proxy_pass http://cryptalias:8080;
     proxy_set_header Host $host;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -449,13 +469,13 @@ If a domain fails these checks, Cryptalias will _stop resolving aliases for that
 
 You can see the current state here:
 
-- `GET /_cryptalias/status`
+- `GET /.well-known/cryptalias/status`
 - `GET /healthz` (simple liveness check for Docker/ops tooling)
 
 Important difference:
 
 - `/healthz` always returns `200` if the process is running
-- `/_cryptalias/status` tells you whether domains are actually healthy
+- `/.well-known/cryptalias/status` tells you whether that domain is healthy
 
 You can control how often the checks run:
 

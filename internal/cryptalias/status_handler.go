@@ -7,38 +7,41 @@ import (
 	"time"
 )
 
-type statusResponse struct {
-	Version      uint           `json:"version"`
-	CheckedAt    time.Time      `json:"checked_at"`
-	OverallOK    bool           `json:"overall_ok"`
-	DomainStatus []DomainStatus `json:"domains"`
+type domainStatusResponse struct {
+	Version   uint         `json:"version"`
+	CheckedAt time.Time    `json:"checked_at"`
+	Healthy   bool         `json:"healthy"`
+	Domain    DomainStatus `json:"domain"`
 }
 
-// StatusHandler exposes the verifier state so operators and clients can see
-// when a domain has been gated due to misconfiguration.
-func StatusHandler(statuses *DomainStatusStore) http.HandlerFunc {
+// WellKnownStatusHandler exposes verifier state for the resolved domain only.
+func WellKnownStatusHandler(store *ConfigStore, statuses *DomainStatusStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		list := statuses.List()
-		overall := true
-		checkedAt := time.Time{}
-		for _, status := range list {
-			if !status.Healthy {
-				overall = false
+		cfg := store.Get()
+		if statuses != nil {
+			statuses.Reconcile(cfg)
+		}
+		domain, err := cfg.GetDomain(r.Host)
+		if err != nil {
+			w.WriteHeader(http.StatusNotFound)
+			_, _ = w.Write([]byte("404 page not found"))
+			return
+		}
+		status := DomainStatus{Domain: domain.Domain, Healthy: true, Message: "domain not tracked", LastChecked: time.Now().UTC()}
+		if statuses != nil {
+			if s, ok := statuses.Get(domain.Domain); ok {
+				status = s
 			}
-			if status.LastChecked.After(checkedAt) {
-				checkedAt = status.LastChecked
+		}
+		if status.LastChecked.IsZero() {
+			status = DomainStatus{
+				Domain:      domain.Domain,
+				Healthy:     true,
+				LastChecked: time.Now().UTC(),
 			}
 		}
-		if checkedAt.IsZero() {
-			checkedAt = time.Now().UTC()
-		}
-
-		resp := statusResponse{
-			Version:      VERSION,
-			CheckedAt:    checkedAt,
-			OverallOK:    overall,
-			DomainStatus: list,
-		}
+		checkedAt := status.LastChecked
+		resp := domainStatusResponse{Version: VERSION, CheckedAt: checkedAt, Healthy: status.Healthy, Domain: status}
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)

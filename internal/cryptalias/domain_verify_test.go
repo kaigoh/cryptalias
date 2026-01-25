@@ -31,8 +31,8 @@ func TestDomainVerifierHealthy(t *testing.T) {
 		switch r.URL.Path {
 		case "/.well-known/cryptalias":
 			WellKnownHandler(store).ServeHTTP(w, r)
-		case "/_cryptalias/keys":
-			JWKSKeysHandler(store).ServeHTTP(w, r)
+		case "/.well-known/cryptalias/keys":
+			WellKnownKeysHandler(store).ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}

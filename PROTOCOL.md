@@ -9,12 +9,12 @@ If you are just operating the server, most of this is handled for you. If you ar
 Cryptalias uses three public HTTP endpoints:
 
 - `GET /.well-known/cryptalias`
-- `GET /_cryptalias/keys`
+- `GET /.well-known/cryptalias/keys`
 - `GET /_cryptalias/resolve/{ticker}/{alias}`
 
 And two operational endpoints:
 
-- `GET /_cryptalias/status` (domain health)
+- `GET /.well-known/cryptalias/status` (domain health)
 - `GET /healthz` (process liveness)
 
 The key idea is simple:
@@ -67,7 +67,7 @@ Traefik (labels on the Cryptalias service):
 ```yaml
 labels:
   - traefik.enable=true
-  - traefik.http.routers.cryptalias-wellknown.rule=Host(`example.com`) && Path(`/.well-known/cryptalias`)
+  - traefik.http.routers.cryptalias-wellknown.rule=Host(`example.com`) && PathPrefix(`/.well-known/cryptalias`)
   - traefik.http.routers.cryptalias-wellknown.entrypoints=websecure
   - traefik.http.routers.cryptalias-wellknown.tls=true
   - traefik.http.routers.cryptalias-wellknown.service=cryptalias-svc
@@ -85,6 +85,12 @@ example.com {
   handle /.well-known/cryptalias {
     reverse_proxy cryptalias:8080
   }
+  handle /.well-known/cryptalias/keys {
+    reverse_proxy cryptalias:8080
+  }
+  handle /.well-known/cryptalias/status {
+    reverse_proxy cryptalias:8080
+  }
 }
 
 cryptalias.example.com {
@@ -98,6 +104,20 @@ Nginx:
 server {
   server_name example.com;
   location = /.well-known/cryptalias {
+    proxy_pass http://cryptalias:8080;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+  }
+
+  location = /.well-known/cryptalias/keys {
+    proxy_pass http://cryptalias:8080;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+  }
+
+  location = /.well-known/cryptalias/status {
     proxy_pass http://cryptalias:8080;
     proxy_set_header Host $host;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -200,30 +220,19 @@ Clients SHOULD:
 
 Operators and advanced clients can check:
 
-- `GET /_cryptalias/status`
-  - Domain-level health and verifier results
+- `GET /.well-known/cryptalias/status`
+  - Health for the resolved domain only
 - `GET /healthz`
   - Simple liveness (always `200` if the process is up)
 
 Important:
 
 - `/healthz` is for containers and load balancers
-- `/_cryptalias/status` is for humans and diagnostics
+- `/.well-known/cryptalias/status` is for humans and diagnostics
 
-## Why `/_cryptalias/keys` exists (SHOULD)
+## Keys endpoint (important)
 
-`/_cryptalias/keys` returns the full key set for all configured domains.
-
-Clients do not strictly need it (the well-known document is enough), but clients SHOULD consider using it when:
-
-- They want to prefetch keys
-- They want to support multiple domains from one resolver
-- They want a second source of truth
-
-Even when using `/_cryptalias/keys`, clients MUST still:
-
-- Bind trust to the domain being resolved
-- Prefer the key advertised by that domain
+`/.well-known/cryptalias/keys` is domain-scoped and returns only that domain's key.
 
 ## Security notes for clients
 

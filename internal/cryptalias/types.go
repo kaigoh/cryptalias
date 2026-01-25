@@ -48,10 +48,6 @@ type WalletDomain struct {
 	Aliases      []WalletAlias     `json:"aliases,omitempty"`
 }
 
-type WalletDomainsKeys struct {
-	Keys []jwk.Key `json:"keys"`
-}
-
 type ResolvedAddress struct {
 	Version uint      `json:"version"`
 	Ticker  string    `json:"ticker"`

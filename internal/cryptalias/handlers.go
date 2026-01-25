@@ -52,26 +52,38 @@ func WellKnownHandler(store *ConfigStore) http.HandlerFunc {
 	}
 }
 
-func JWKSKeysHandler(store *ConfigStore) http.HandlerFunc {
+// WellKnownKeysHandler serves the single domain key on the resolved domain.
+func WellKnownKeysHandler(store *ConfigStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		slog.Debug("jwks request", "path", r.URL.Path)
+		slog.Debug("well-known keys request", "host", r.Host, "path", r.URL.Path)
 		c := store.Get()
-		keys := make([]jwk.Key, 0, len(c.Domains))
 
-		for _, d := range c.Domains {
-			key, err := d.GetJWK()
-			if err != nil {
-				slog.Warn("jwks skipping domain", "domain", d.Domain, "error", err)
-				continue
-			}
-			keys = append(keys, key)
+		domain, err := c.GetDomain(r.Host)
+		if err != nil {
+			slog.Warn("well-known keys domain not configured", "host", r.Host)
+			w.WriteHeader(http.StatusNotFound)
+			fmt.Fprintf(w, "404 page not found")
+			return
+		}
+
+		key, err := domain.GetJWK()
+		if err != nil {
+			slog.Error("well-known keys jwk generation failed", "domain", domain.Domain, "error", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprint(w, err.Error())
+			return
 		}
 
 		w.WriteHeader(http.StatusOK)
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(WalletDomainsKeys{Keys: keys})
-		slog.Debug("jwks response sent", "keys", len(keys))
-
+		_ = json.NewEncoder(w).Encode(struct {
+			Domain string  `json:"domain"`
+			Key    jwk.Key `json:"key"`
+		}{
+			Domain: domain.Domain,
+			Key:    key,
+		})
+		slog.Debug("well-known keys response sent", "domain", domain.Domain)
 	}
 }
 
