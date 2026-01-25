@@ -19,8 +19,11 @@ const (
 )
 
 type WalletAddress struct {
-	Ticker  string `json:"ticker" yaml:"ticker"`
-	Address string `json:"address" yaml:"address"`
+	Ticker       string  `json:"ticker" yaml:"ticker"`
+	Address      string  `json:"address" yaml:"address"`
+	AccountIndex *uint64 `json:"account_index,omitempty" yaml:"account_index,omitempty"`
+	AccountID    *string `json:"account_id,omitempty" yaml:"account_id,omitempty"`
+	WalletID     *string `json:"wallet_id,omitempty" yaml:"wallet_id,omitempty"`
 }
 
 type WalletAlias struct {

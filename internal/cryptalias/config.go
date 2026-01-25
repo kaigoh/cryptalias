@@ -75,9 +75,11 @@ func (c *Config) Normalize(path string) {
 		for a := range c.Domains[i].Aliases {
 			c.Domains[i].Aliases[a].Alias = strings.ToLower(c.Domains[i].Aliases[a].Alias)
 			c.Domains[i].Aliases[a].Wallet.Ticker = strings.ToLower(c.Domains[i].Aliases[a].Wallet.Ticker)
+			normalizeWalletAddress(&c.Domains[i].Aliases[a].Wallet)
 			for t := range c.Domains[i].Aliases[a].Tags {
 				c.Domains[i].Aliases[a].Tags[t].Tag = strings.ToLower(c.Domains[i].Aliases[a].Tags[t].Tag)
 				c.Domains[i].Aliases[a].Tags[t].Wallet.Ticker = strings.ToLower(c.Domains[i].Aliases[a].Tags[t].Wallet.Ticker)
+				normalizeWalletAddress(&c.Domains[i].Aliases[a].Tags[t].Wallet)
 			}
 		}
 		if result, err := c.Domains[i].GenerateKeys(); !result && err != nil {
@@ -294,10 +296,27 @@ type TokenEndpointConfig struct {
 	Token           string            `yaml:"token,omitempty"`
 	Username        string            `yaml:"username,omitempty"`
 	Password        string            `yaml:"password,omitempty"`
+	WalletFile      string            `yaml:"wallet_file,omitempty"`
+	WalletPassword  string            `yaml:"wallet_password,omitempty"`
 }
 
 func boolPtr(v bool) *bool {
 	return &v
+}
+
+func normalizeWalletAddress(w *WalletAddress) {
+	if w == nil {
+		return
+	}
+	w.Address = strings.TrimSpace(w.Address)
+	if w.AccountID != nil {
+		v := strings.TrimSpace(*w.AccountID)
+		w.AccountID = &v
+	}
+	if w.WalletID != nil {
+		v := strings.TrimSpace(*w.WalletID)
+		w.WalletID = &v
+	}
 }
 
 func LoadOrCreateConfig(path string, defaultCfg *Config) (*Config, error) {

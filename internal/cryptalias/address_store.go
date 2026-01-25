@@ -40,9 +40,9 @@ func statePathFor(configPath string) string {
 	return configPath + ".state.json"
 }
 
-func aliasKey(ticker, domain, alias, tag, clientKey string) string {
+func aliasKey(ticker, domain, alias, tag, accountKey, clientKey string) string {
 	// Keep the key stable and readable; tag may be empty.
-	return ticker + "|" + domain + "|" + alias + "|" + tag + "|" + clientKey
+	return ticker + "|" + domain + "|" + alias + "|" + tag + "|" + accountKey + "|" + clientKey
 }
 
 func (s *AddressStore) Get(key string, now time.Time) (string, bool) {

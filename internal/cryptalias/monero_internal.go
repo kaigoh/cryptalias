@@ -2,12 +2,17 @@ package cryptalias
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"net"
+	"net/http"
+	"strings"
+	"sync"
 	"sync/atomic"
+	"time"
 
 	cryptaliasv1 "github.com/kaigoh/cryptalias/proto/cryptalias/v1"
-	"github.com/kaigoh/cryptalias/wallet_interfaces/xmr"
+	"gitlab.com/moneropay/go-monero/walletrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/test/bufconn"
@@ -52,6 +57,7 @@ func (i *internalMoneroGRPC) Client(endpoint TokenEndpointConfig) cryptaliasv1.W
 type moneroWalletService struct {
 	cryptaliasv1.UnimplementedWalletServiceServer
 	endpoint atomic.Value // TokenEndpointConfig
+	mu       sync.Mutex
 }
 
 func newMoneroWalletService(endpoint TokenEndpointConfig) *moneroWalletService {
@@ -66,9 +72,25 @@ func (s *moneroWalletService) SetEndpoint(endpoint TokenEndpointConfig) {
 
 func (s *moneroWalletService) GetAddress(ctx context.Context, req *cryptaliasv1.WalletAddressRequest) (*cryptaliasv1.WalletAddressResponse, error) {
 	ep, _ := s.endpoint.Load().(TokenEndpointConfig)
-	client := xmr.NewWalletRPC(ep.EndpointAddress, ep.Username, ep.Password)
-	if !client.Enabled() {
-		return nil, fmt.Errorf("monero wallet rpc not configured")
+	client := s.newWalletRPC(ep.EndpointAddress, ep.Username, ep.Password)
+
+	// monero-wallet-rpc can only have one wallet open at a time; serialize access.
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	accountIndex := uint64(0)
+	if req.AccountIndex != nil {
+		accountIndex = req.GetAccountIndex()
+	}
+
+	if strings.TrimSpace(ep.WalletFile) != "" {
+		if err := client.OpenWallet(ctx, &walletrpc.OpenWalletRequest{
+			Filename: ep.WalletFile,
+			Password: ep.WalletPassword,
+		}); err != nil {
+			return nil, err
+		}
+		defer func() { _ = client.CloseWallet(ctx) }()
 	}
 
 	label := req.GetDomain() + ":" + req.GetAlias()
@@ -76,11 +98,14 @@ func (s *moneroWalletService) GetAddress(ctx context.Context, req *cryptaliasv1.
 		label += "+" + tag
 	}
 
-	addrBytes, _, err := client.CreateAddress(ctx, 0, []byte(label))
+	resp, err := client.CreateAddress(ctx, &walletrpc.CreateAddressRequest{
+		AccountIndex: accountIndex,
+		Label:        label,
+	})
 	if err != nil {
 		return nil, err
 	}
-	addr := string(addrBytes)
+	addr := resp.Address
 	if addr == "" {
 		return nil, fmt.Errorf("monero wallet rpc returned empty address")
 	}
@@ -89,4 +114,20 @@ func (s *moneroWalletService) GetAddress(ctx context.Context, req *cryptaliasv1.
 
 func (s *moneroWalletService) Health(context.Context, *cryptaliasv1.HealthRequest) (*cryptaliasv1.HealthResponse, error) {
 	return &cryptaliasv1.HealthResponse{Ok: true, Message: "ok"}, nil
+}
+
+func (s *moneroWalletService) newWalletRPC(url, user, password string) *walletrpc.Client {
+	headers := map[string]string{}
+	if user != "" || password != "" {
+		token := base64.StdEncoding.EncodeToString([]byte(user + ":" + password))
+		headers["Authorization"] = "Basic " + token
+	}
+
+	client := walletrpc.New(walletrpc.Config{
+		Address:       url,
+		CustomHeaders: headers,
+		Client:        &http.Client{Timeout: 10 * time.Second},
+	})
+
+	return client
 }

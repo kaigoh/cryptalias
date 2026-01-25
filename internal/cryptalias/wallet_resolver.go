@@ -8,6 +8,7 @@ import (
 	"time"
 
 	cryptaliasv1 "github.com/kaigoh/cryptalias/proto/cryptalias/v1"
+	"google.golang.org/protobuf/proto"
 )
 
 type WalletResolver struct {
@@ -46,10 +47,13 @@ func newWalletResolverWithDeps(state *AddressStore, internalFn func(context.Cont
 }
 
 type dynamicAliasInput struct {
-	Ticker string
-	Alias  string
-	Tag    string
-	Domain string
+	Ticker       string
+	Alias        string
+	Tag          string
+	Domain       string
+	AccountIndex *uint64
+	AccountID    *string
+	WalletID     *string
 }
 
 func (r *WalletResolver) Resolve(ctx context.Context, cfg *Config, in dynamicAliasInput) (WalletAddress, error) {
@@ -60,7 +64,7 @@ func (r *WalletResolver) Resolve(ctx context.Context, cfg *Config, in dynamicAli
 
 	clientKey := clientKeyFromContext(ctx)
 	now := time.Now().UTC()
-	cacheKey := aliasKey(in.Ticker, in.Domain, in.Alias, in.Tag, clientKey)
+	cacheKey := aliasKey(in.Ticker, in.Domain, in.Alias, in.Tag, accountKey(in), clientKey)
 	if addr, ok := r.state.Get(cacheKey, now); ok {
 		slog.Debug("dynamic resolve cache hit", "ticker", in.Ticker, "domain", in.Domain, "client", clientKey)
 		return WalletAddress{Ticker: in.Ticker, Address: addr}, nil
@@ -97,12 +101,22 @@ func (r *WalletResolver) resolveInternal(ctx context.Context, token TokenConfig,
 		if err != nil {
 			return "", err
 		}
-		resp, err := client.GetAddress(ctx, &cryptaliasv1.WalletAddressRequest{
+		req := &cryptaliasv1.WalletAddressRequest{
 			Ticker: in.Ticker,
 			Alias:  in.Alias,
 			Tag:    in.Tag,
 			Domain: in.Domain,
-		})
+		}
+		if in.AccountIndex != nil {
+			req.AccountIndex = proto.Uint64(*in.AccountIndex)
+		}
+		if in.AccountID != nil {
+			req.AccountId = proto.String(*in.AccountID)
+		}
+		if in.WalletID != nil {
+			req.WalletId = proto.String(*in.WalletID)
+		}
+		resp, err := client.GetAddress(ctx, req)
 		if err != nil {
 			return "", err
 		}
@@ -126,4 +140,18 @@ func findTokenConfig(cfg *Config, ticker string) (TokenConfig, error) {
 		}
 	}
 	return TokenConfig{}, fmt.Errorf("unknown ticker")
+}
+
+func accountKey(in dynamicAliasInput) string {
+	var parts []string
+	if in.AccountIndex != nil {
+		parts = append(parts, fmt.Sprintf("ai=%d", *in.AccountIndex))
+	}
+	if in.AccountID != nil && *in.AccountID != "" {
+		parts = append(parts, "aid="+*in.AccountID)
+	}
+	if in.WalletID != nil && *in.WalletID != "" {
+		parts = append(parts, "wid="+*in.WalletID)
+	}
+	return strings.Join(parts, "|")
 }

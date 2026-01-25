@@ -31,7 +31,9 @@ func ParseAlias(input string, ticker string, config *Config) (Alias, error) {
 	if err != nil {
 		return Alias{}, err
 	}
-	if tryStaticResolution(&alias, domainCfg, tickerClean) {
+	walletCfg, ok := findAliasWallet(domainCfg, alias.Alias, alias.Tag, tickerClean)
+	if ok && strings.TrimSpace(walletCfg.Address) != "" {
+		alias.Wallet = walletCfg
 		return alias, nil
 	}
 	return Alias{}, ErrAliasNotFound
@@ -42,19 +44,28 @@ func ResolveAlias(ctx context.Context, input string, ticker string, cfg *Config,
 	if err != nil {
 		return Alias{}, err
 	}
-	if tryStaticResolution(&alias, domainCfg, tickerClean) {
+	walletCfg, ok := findAliasWallet(domainCfg, alias.Alias, alias.Tag, tickerClean)
+	if ok && strings.TrimSpace(walletCfg.Address) != "" {
+		alias.Wallet = walletCfg
 		return alias, nil
 	}
 	if resolver == nil {
 		return Alias{}, ErrAliasNotFound
 	}
 
-	wallet, err := resolver.Resolve(ctx, cfg, dynamicAliasInput{
+	in := dynamicAliasInput{
 		Ticker: tickerClean,
 		Alias:  alias.Alias,
 		Tag:    alias.Tag,
 		Domain: alias.Domain,
-	})
+	}
+	if ok {
+		in.AccountIndex = walletCfg.AccountIndex
+		in.AccountID = walletCfg.AccountID
+		in.WalletID = walletCfg.WalletID
+	}
+
+	wallet, err := resolver.Resolve(ctx, cfg, in)
 	if err != nil {
 		return Alias{}, err
 	}
@@ -112,25 +123,23 @@ func parseAliasIdentifier(input string, ticker string, cfg *Config) (Alias, Alia
 	return Alias{}, AliasDomainConfig{}, "", ErrAliasNotFound
 }
 
-func tryStaticResolution(alias *Alias, domainCfg AliasDomainConfig, tickerClean string) bool {
+func findAliasWallet(domainCfg AliasDomainConfig, aliasName, tag, tickerClean string) (WalletAddress, bool) {
 	for _, a := range domainCfg.Aliases {
-		if a.Alias != alias.Alias {
+		if a.Alias != aliasName {
 			continue
 		}
 		// Check tags first.
 		for _, t := range a.Tags {
-			if t.Tag == alias.Tag && t.Wallet.Ticker == tickerClean {
-				alias.Wallet = t.Wallet
-				return true
+			if t.Tag == tag && t.Wallet.Ticker == tickerClean {
+				return t.Wallet, true
 			}
 		}
 		// Fall back to the root alias if tickers match.
 		if a.Wallet.Ticker == tickerClean {
-			alias.Wallet = a.Wallet
-			return true
+			return a.Wallet, true
 		}
 	}
-	return false
+	return WalletAddress{}, false
 }
 
 func validateAliasOrTag(s, field string) error {

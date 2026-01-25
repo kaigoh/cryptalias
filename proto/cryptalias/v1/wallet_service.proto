@@ -14,6 +14,9 @@ message WalletAddressRequest {
   string alias = 2;
   string tag = 3;
   string domain = 4;
+  optional uint64 account_index = 5;
+  optional string account_id = 6;
+  optional string wallet_id = 7;
 }
 
 message WalletAddressResponse {

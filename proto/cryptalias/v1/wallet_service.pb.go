@@ -27,6 +27,9 @@ type WalletAddressRequest struct {
 	Alias         string                 `protobuf:"bytes,2,opt,name=alias,proto3" json:"alias,omitempty"`
 	Tag           string                 `protobuf:"bytes,3,opt,name=tag,proto3" json:"tag,omitempty"`
 	Domain        string                 `protobuf:"bytes,4,opt,name=domain,proto3" json:"domain,omitempty"`
+	AccountIndex  *uint64                `protobuf:"varint,5,opt,name=account_index,json=accountIndex,proto3,oneof" json:"account_index,omitempty"`
+	AccountId     *string                `protobuf:"bytes,6,opt,name=account_id,json=accountId,proto3,oneof" json:"account_id,omitempty"`
+	WalletId      *string                `protobuf:"bytes,7,opt,name=wallet_id,json=walletId,proto3,oneof" json:"wallet_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -85,6 +88,27 @@ func (x *WalletAddressRequest) GetTag() string {
 func (x *WalletAddressRequest) GetDomain() string {
 	if x != nil {
 		return x.Domain
+	}
+	return ""
+}
+
+func (x *WalletAddressRequest) GetAccountIndex() uint64 {
+	if x != nil && x.AccountIndex != nil {
+		return *x.AccountIndex
+	}
+	return 0
+}
+
+func (x *WalletAddressRequest) GetAccountId() string {
+	if x != nil && x.AccountId != nil {
+		return *x.AccountId
+	}
+	return ""
+}
+
+func (x *WalletAddressRequest) GetWalletId() string {
+	if x != nil && x.WalletId != nil {
+		return *x.WalletId
 	}
 	return ""
 }
@@ -225,12 +249,20 @@ var File_proto_cryptalias_v1_wallet_service_proto protoreflect.FileDescriptor
 
 const file_proto_cryptalias_v1_wallet_service_proto_rawDesc = "" +
 	"\n" +
-	"(proto/cryptalias/v1/wallet_service.proto\x12\rcryptalias.v1\"n\n" +
+	"(proto/cryptalias/v1/wallet_service.proto\x12\rcryptalias.v1\"\x8d\x02\n" +
 	"\x14WalletAddressRequest\x12\x16\n" +
 	"\x06ticker\x18\x01 \x01(\tR\x06ticker\x12\x14\n" +
 	"\x05alias\x18\x02 \x01(\tR\x05alias\x12\x10\n" +
 	"\x03tag\x18\x03 \x01(\tR\x03tag\x12\x16\n" +
-	"\x06domain\x18\x04 \x01(\tR\x06domain\"1\n" +
+	"\x06domain\x18\x04 \x01(\tR\x06domain\x12(\n" +
+	"\raccount_index\x18\x05 \x01(\x04H\x00R\faccountIndex\x88\x01\x01\x12\"\n" +
+	"\n" +
+	"account_id\x18\x06 \x01(\tH\x01R\taccountId\x88\x01\x01\x12 \n" +
+	"\twallet_id\x18\a \x01(\tH\x02R\bwalletId\x88\x01\x01B\x10\n" +
+	"\x0e_account_indexB\r\n" +
+	"\v_account_idB\f\n" +
+	"\n" +
+	"_wallet_id\"1\n" +
 	"\x15WalletAddressResponse\x12\x18\n" +
 	"\aaddress\x18\x01 \x01(\tR\aaddress\"\x0f\n" +
 	"\rHealthRequest\":\n" +
@@ -278,6 +310,7 @@ func file_proto_cryptalias_v1_wallet_service_proto_init() {
 	if File_proto_cryptalias_v1_wallet_service_proto != nil {
 		return
 	}
+	file_proto_cryptalias_v1_wallet_service_proto_msgTypes[0].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

@@ -10,6 +10,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/protobuf/proto"
 )
 
 type grpcWalletClient struct {
@@ -32,12 +33,22 @@ func (c *grpcWalletClient) GetAddress(ctx context.Context, endpoint TokenEndpoin
 	}
 
 	ctx = withEndpointAuth(ctx, endpoint)
-	resp, err := client.GetAddress(ctx, &cryptaliasv1.WalletAddressRequest{
+	req := &cryptaliasv1.WalletAddressRequest{
 		Ticker: in.Ticker,
 		Alias:  in.Alias,
 		Tag:    in.Tag,
 		Domain: in.Domain,
-	})
+	}
+	if in.AccountIndex != nil {
+		req.AccountIndex = proto.Uint64(*in.AccountIndex)
+	}
+	if in.AccountID != nil {
+		req.AccountId = proto.String(*in.AccountID)
+	}
+	if in.WalletID != nil {
+		req.WalletId = proto.String(*in.WalletID)
+	}
+	resp, err := client.GetAddress(ctx, req)
 	if err != nil {
 		return "", err
 	}
