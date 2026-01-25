@@ -29,10 +29,10 @@ services:
       - --rpc-bind-ip=0.0.0.0
       - --rpc-bind-port=18083
       - --rpc-login=${MONERO_RPC_USER:-cryptalias}:${MONERO_RPC_PASS:-change-me}
-      - --wallet-dir=/wallets
+      - --wallet-dir=/home/monero/wallet
       - --daemon-address=${MONERO_DAEMON_ADDRESS:-monerod:18081}
     volumes:
-      - ./monero:/wallets
+      - ./monero:/home/monero/
     networks:
       - cryptalias
 
@@ -42,7 +42,11 @@ services:
       dockerfile: Dockerfile
     command: ["/config/config.yml"]
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:8080/healthz >/dev/null || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          "wget -q -O - http://127.0.0.1:8080/healthz >/dev/null || exit 1",
+        ]
       interval: 30s
       timeout: 5s
       retries: 5
