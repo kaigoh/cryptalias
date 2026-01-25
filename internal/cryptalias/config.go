@@ -99,7 +99,9 @@ func (c *Config) Normalize(path string) {
 	}
 	if triggerSave {
 		// Persist generated keys so subsequent reloads are deterministic.
-		SaveConfig(path, c)
+		if err := SaveConfig(path, c); err != nil {
+			log.Printf("failed to persist generated keys to %s: %v", path, err)
+		}
 	}
 }
 
