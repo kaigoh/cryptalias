@@ -29,7 +29,7 @@ func TestDomainVerifierHealthy(t *testing.T) {
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
-		case "/.well-known/cryptalias":
+		case "/.well-known/cryptalias/configuration":
 			WellKnownHandler(store).ServeHTTP(w, r)
 		case "/.well-known/cryptalias/keys":
 			WellKnownKeysHandler(store).ServeHTTP(w, r)

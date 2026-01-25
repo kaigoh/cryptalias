@@ -8,7 +8,7 @@ If you are just operating the server, most of this is handled for you. If you ar
 
 Cryptalias uses three public HTTP endpoints:
 
-- `GET /.well-known/cryptalias`
+- `GET /.well-known/cryptalias/configuration`
 - `GET /.well-known/cryptalias/keys`
 - `GET /_cryptalias/resolve/{ticker}/{alias}`
 
@@ -46,7 +46,7 @@ Clients MUST:
 
 Clients MUST fetch:
 
-- `<scheme>://<domain>/.well-known/cryptalias`
+- `<scheme>://<domain>/.well-known/cryptalias/configuration`
 
 Clients MUST:
 
@@ -56,7 +56,7 @@ Clients MUST:
 
 Hosting rules (critical):
 
-- `/.well-known/cryptalias` MUST be served on the resolved domain itself (example: `https://example.com/.well-known/cryptalias`)
+- `/.well-known/cryptalias/configuration` MUST be served on the resolved domain itself (example: `https://example.com/.well-known/cryptalias/configuration`)
 - Resolver endpoints under `/_cryptalias/*` MUST be served on the Cryptalias host (example: `https://cryptalias.example.com/_cryptalias/resolve/xmr/alice$example.com`)
 - Resolver endpoints do not need to be served on the resolved domain (counter-example: `https://example.com/_cryptalias/resolve/...`)
 
@@ -67,7 +67,7 @@ Traefik (labels on the Cryptalias service):
 ```yaml
 labels:
   - traefik.enable=true
-  - traefik.http.routers.cryptalias-wellknown.rule=Host(`example.com`) && PathPrefix(`/.well-known/cryptalias`)
+  - traefik.http.routers.cryptalias-wellknown.rule=Host(`example.com`) && PathPrefix(`/.well-known/cryptalias/`)
   - traefik.http.routers.cryptalias-wellknown.entrypoints=websecure
   - traefik.http.routers.cryptalias-wellknown.tls=true
   - traefik.http.routers.cryptalias-wellknown.service=cryptalias-svc
@@ -82,13 +82,7 @@ Caddy:
 
 ```caddyfile
 example.com {
-  handle /.well-known/cryptalias {
-    reverse_proxy cryptalias:8080
-  }
-  handle /.well-known/cryptalias/keys {
-    reverse_proxy cryptalias:8080
-  }
-  handle /.well-known/cryptalias/status {
+  handle_path /.well-known/cryptalias/* {
     reverse_proxy cryptalias:8080
   }
 }
@@ -103,21 +97,7 @@ Nginx:
 ```nginx
 server {
   server_name example.com;
-  location = /.well-known/cryptalias {
-    proxy_pass http://cryptalias:8080;
-    proxy_set_header Host $host;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
-  }
-
-  location = /.well-known/cryptalias/keys {
-    proxy_pass http://cryptalias:8080;
-    proxy_set_header Host $host;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
-  }
-
-  location = /.well-known/cryptalias/status {
+  location ^~ /.well-known/cryptalias/ {
     proxy_pass http://cryptalias:8080;
     proxy_set_header Host $host;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -166,7 +146,7 @@ The content type is:
 
 Clients MUST:
 
-1. Verify the JWS signature using the domain public key from `/.well-known/cryptalias`
+1. Verify the JWS signature using the domain public key from `/.well-known/cryptalias/configuration`
 2. Only trust the payload after signature verification succeeds
 
 The expected payload shape (after verifying the JWS) is:
@@ -379,7 +359,7 @@ If you are writing a client or wallet integration, these are the interoperabilit
 
 Clients MUST:
 
-- Use `/.well-known/cryptalias` for discovery
+- Use `/.well-known/cryptalias/configuration` for discovery
 - Verify JWS signatures
 - Enforce `expires`
 

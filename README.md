@@ -359,16 +359,16 @@ Cryptalias now checks your domains routinely, like a client would.
 
 It verifies things like:
 
-- `/.well-known/cryptalias` responds correctly
+- `/.well-known/cryptalias/configuration` responds correctly
 - `/.well-known/cryptalias/keys` serves the right key for the domain
 - DNS resolves
 - The `_cryptalias` TXT record matches your configured public key
 
 Very important hosting rule:
 
-- `https://yourdomain.com/.well-known/cryptalias` must be served by the domain being resolved
+- `https://yourdomain.com/.well-known/cryptalias/configuration` must be served by the domain being resolved
 - `/_cryptalias/*` must be served by the Cryptalias host (for example `https://cryptalias.yourdomain.com/_cryptalias/...`)
-- Correct example: discovery at `https://example.com/.well-known/cryptalias`
+- Correct example: discovery at `https://example.com/.well-known/cryptalias/configuration`
 - Correct example: resolution at `https://cryptalias.example.com/_cryptalias/resolve/xmr/alice$example.com`
 - Not required: `https://example.com/_cryptalias/resolve/...`
 
@@ -376,7 +376,7 @@ Very important hosting rule:
 
 Your proxy needs to do two different things:
 
-- On each resolved domain, forward only `/.well-known/cryptalias` to Cryptalias
+- On each resolved domain, forward `/.well-known/cryptalias/` to Cryptalias
 - On the Cryptalias host, forward `/_cryptalias/*` to Cryptalias
 
 Below are minimal examples that show the intent clearly.
@@ -390,7 +390,7 @@ labels:
   - traefik.enable=true
 
   # 1) Discovery on the resolved domain
-  - traefik.http.routers.cryptalias-wellknown.rule=Host(`example.com`) && PathPrefix(`/.well-known/cryptalias`)
+  - traefik.http.routers.cryptalias-wellknown.rule=Host(`example.com`) && PathPrefix(`/.well-known/cryptalias/`)
   - traefik.http.routers.cryptalias-wellknown.entrypoints=websecure
   - traefik.http.routers.cryptalias-wellknown.tls=true
   - traefik.http.routers.cryptalias-wellknown.service=cryptalias-svc
@@ -409,13 +409,7 @@ labels:
 
 ```caddyfile
 example.com {
-  handle /.well-known/cryptalias {
-    reverse_proxy cryptalias:8080
-  }
-  handle /.well-known/cryptalias/keys {
-    reverse_proxy cryptalias:8080
-  }
-  handle /.well-known/cryptalias/status {
+  handle_path /.well-known/cryptalias/* {
     reverse_proxy cryptalias:8080
   }
 }
@@ -431,21 +425,7 @@ cryptalias.example.com {
 server {
   server_name example.com;
 
-  location = /.well-known/cryptalias {
-    proxy_pass http://cryptalias:8080;
-    proxy_set_header Host $host;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
-  }
-
-  location = /.well-known/cryptalias/keys {
-    proxy_pass http://cryptalias:8080;
-    proxy_set_header Host $host;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
-  }
-
-  location = /.well-known/cryptalias/status {
+  location ^~ /.well-known/cryptalias/ {
     proxy_pass http://cryptalias:8080;
     proxy_set_header Host $host;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;

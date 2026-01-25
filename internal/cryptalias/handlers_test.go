@@ -27,7 +27,7 @@ func newTestStore(t *testing.T) (*ConfigStore, *WalletResolver) {
 
 func TestWellKnownHandler(t *testing.T) {
 	store, _ := newTestStore(t)
-	req := httptest.NewRequest(http.MethodGet, "/.well-known/cryptalias", nil)
+	req := httptest.NewRequest(http.MethodGet, "/.well-known/cryptalias/configuration", nil)
 	req.Host = "127.0.0.1"
 	rr := httptest.NewRecorder()
 

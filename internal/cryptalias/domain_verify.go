@@ -136,7 +136,7 @@ func (v *domainVerifier) verifyDomain(ctx context.Context, cfg *Config, domainCf
 }
 
 func (v *domainVerifier) checkWellKnown(ctx context.Context, base *url.URL, domainCfg AliasDomainConfig) error {
-	body, err := v.getWithHost(ctx, base, "/.well-known/cryptalias", domainCfg.Domain)
+	body, err := v.getWithHost(ctx, base, "/.well-known/cryptalias/configuration", domainCfg.Domain)
 	if err != nil {
 		return err
 	}
