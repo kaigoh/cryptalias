@@ -148,7 +148,7 @@ func (v *domainVerifier) checkWellKnown(ctx context.Context, base *url.URL, doma
 	if err := json.Unmarshal(body, &raw); err != nil {
 		return fmt.Errorf("decode response: %w", err)
 	}
-	if strings.ToLower(strings.TrimSpace(raw.Domain)) != strings.ToLower(domainCfg.Domain) {
+	if !strings.EqualFold(strings.TrimSpace(raw.Domain), domainCfg.Domain) {
 		return fmt.Errorf("domain mismatch: got %q", raw.Domain)
 	}
 
@@ -181,7 +181,7 @@ func (v *domainVerifier) checkJWKS(ctx context.Context, base *url.URL, domainCfg
 			continue
 		}
 		kid, ok := key.KeyID()
-		if !ok || (kid != strings.ToLower(domainCfg.Domain) && kid != domainCfg.Domain) {
+		if !ok || !strings.EqualFold(kid, domainCfg.Domain) {
 			continue
 		}
 		return ensureKeyMatchesDomain(key, domainCfg)
@@ -217,7 +217,7 @@ func (v *domainVerifier) getWithHost(ctx context.Context, base *url.URL, path, h
 
 func ensureKeyMatchesDomain(key jwk.Key, domainCfg AliasDomainConfig) error {
 	kid, ok := key.KeyID()
-	if !ok || kid != domainCfg.Domain {
+	if !ok || !strings.EqualFold(kid, domainCfg.Domain) {
 		return fmt.Errorf("kid mismatch: got %v", kid)
 	}
 
