@@ -24,6 +24,7 @@ What Cryptalias adds on top:
 - Dynamic resolution: the alias can request a fresh address from a wallet service
 - Per-client stability window: the same client gets the same address for a short time (to reduce sniffing)
 - Signed outputs: responses are signed with your domain key so clients can verify them
+- Protocol details for client and wallet implementers: `PROTOCOL.md`
 
 Future direction:
 
@@ -354,6 +355,87 @@ It verifies things like:
 - `/_cryptalias/keys` contains the right key for the domain
 - DNS resolves
 - The `_cryptalias` TXT record matches your configured public key
+
+Very important hosting rule:
+
+- `https://yourdomain.com/.well-known/cryptalias` must be served by the domain being resolved
+- `/_cryptalias/*` must be served by the Cryptalias host (for example `https://cryptalias.yourdomain.com/_cryptalias/...`)
+- Correct example: discovery at `https://example.com/.well-known/cryptalias`
+- Correct example: resolution at `https://cryptalias.example.com/_cryptalias/resolve/xmr/alice$example.com`
+- Not required: `https://example.com/_cryptalias/resolve/...`
+
+### Reverse proxy routing examples (the important bit)
+
+Your proxy needs to do two different things:
+
+- On each resolved domain, forward only `/.well-known/cryptalias` to Cryptalias
+- On the Cryptalias host, forward `/_cryptalias/*` to Cryptalias
+
+Below are minimal examples that show the intent clearly.
+
+#### Traefik (labels)
+
+These routers can sit on the `cryptalias` service.
+
+```yaml
+labels:
+  - traefik.enable=true
+
+  # 1) Discovery on the resolved domain
+  - traefik.http.routers.cryptalias-wellknown.rule=Host(`example.com`) && Path(`/.well-known/cryptalias`)
+  - traefik.http.routers.cryptalias-wellknown.entrypoints=websecure
+  - traefik.http.routers.cryptalias-wellknown.tls=true
+  - traefik.http.routers.cryptalias-wellknown.service=cryptalias-svc
+
+  # 2) Resolution on the Cryptalias host
+  - traefik.http.routers.cryptalias-public.rule=Host(`cryptalias.example.com`) && PathPrefix(`/_cryptalias/`)
+  - traefik.http.routers.cryptalias-public.entrypoints=websecure
+  - traefik.http.routers.cryptalias-public.tls=true
+  - traefik.http.routers.cryptalias-public.service=cryptalias-svc
+
+  # Service target
+  - traefik.http.services.cryptalias-svc.loadbalancer.server.port=8080
+```
+
+#### Caddy
+
+```caddyfile
+example.com {
+  handle /.well-known/cryptalias {
+    reverse_proxy cryptalias:8080
+  }
+}
+
+cryptalias.example.com {
+  reverse_proxy cryptalias:8080
+}
+```
+
+#### Nginx
+
+```nginx
+server {
+  server_name example.com;
+
+  location = /.well-known/cryptalias {
+    proxy_pass http://cryptalias:8080;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+  }
+}
+
+server {
+  server_name cryptalias.example.com;
+
+  location /_cryptalias/ {
+    proxy_pass http://cryptalias:8080;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+  }
+}
+```
 
 If a domain fails these checks, Cryptalias will *stop resolving aliases for that domain* until it becomes healthy again.
 
