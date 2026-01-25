@@ -75,7 +75,7 @@ func JWKSKeysHandler(store *ConfigStore) http.HandlerFunc {
 	}
 }
 
-func AliasResolverHandler(store *ConfigStore, resolver walletResolver) http.HandlerFunc {
+func AliasResolverHandler(store *ConfigStore, resolver walletResolver, statuses *DomainStatusStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ticker := r.PathValue("ticker")
 		rawAlias := r.PathValue("alias")
@@ -89,6 +89,19 @@ func AliasResolverHandler(store *ConfigStore, resolver walletResolver) http.Hand
 		}
 
 		c := store.Get()
+		if statuses != nil {
+			statuses.Reconcile(c)
+		}
+		if statuses != nil {
+			if domain, err := ParseAliasDomain(rawAlias); err == nil {
+				if healthy, status := statuses.Healthy(domain); !healthy {
+					slog.Warn("resolve gated unhealthy domain", "domain", domain, "message", status.Message)
+					w.WriteHeader(http.StatusServiceUnavailable)
+					fmt.Fprintf(w, "503 domain unhealthy: %s", status.Message)
+					return
+				}
+			}
+		}
 		identity := newClientIdentity(c.Resolution.ClientIdentity)
 		clientKey := identity.Key(r)
 		// Propagate the derived client identity so the resolver cache can bind to it.

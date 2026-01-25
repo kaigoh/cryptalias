@@ -22,6 +22,7 @@ type Config struct {
 	Logging    LoggingConfig       `yaml:"logging,omitempty"`
 	RateLimit  RateLimitConfig     `yaml:"rate_limit,omitempty"`
 	Resolution ResolutionConfig    `yaml:"resolution,omitempty"`
+	Verify     VerifyConfig        `yaml:"verify,omitempty"`
 	Domains    []AliasDomainConfig `yaml:"domains"`
 	Tokens     []TokenConfig       `yaml:"tokens"`
 }
@@ -36,6 +37,7 @@ func (c *Config) Clone() *Config {
 		Logging:    c.Logging,
 		RateLimit:  c.RateLimit.Clone(),
 		Resolution: c.Resolution.Clone(),
+		Verify:     c.Verify.Clone(),
 		Domains:    make([]AliasDomainConfig, len(c.Domains)),
 		Tokens:     make([]TokenConfig, len(c.Tokens)),
 	}
@@ -71,6 +73,9 @@ func (c *Config) Normalize(path string) {
 	}
 	if strings.TrimSpace(c.Resolution.ClientIdentity.Header) == "" {
 		c.Resolution.ClientIdentity.Header = "X-Forwarded-For"
+	}
+	if c.Verify.IntervalMinutes <= 0 {
+		c.Verify.IntervalMinutes = 5
 	}
 	triggerSave := false
 	// Normalize case for stable matching across requests.
@@ -119,6 +124,9 @@ func (c *Config) Validate() error {
 	}
 	if c.Resolution.TTLSeconds <= 0 {
 		return fmt.Errorf("resolution.ttl_seconds must be > 0")
+	}
+	if c.Verify.IntervalMinutes <= 0 {
+		return fmt.Errorf("verify.interval_minutes must be > 0")
 	}
 	switch c.Resolution.ClientIdentity.Strategy {
 	case ClientIdentityStrategyRemoteAddr, ClientIdentityStrategyXFF, ClientIdentityStrategyXFFUA, ClientIdentityStrategyHeader, ClientIdentityStrategyHeaderUA:
@@ -194,10 +202,21 @@ type ResolutionConfig struct {
 	ClientIdentity ClientIdentityConfig `yaml:"client_identity,omitempty"`
 }
 
+type VerifyConfig struct {
+	// IntervalMinutes controls how often the domain verifier runs.
+	IntervalMinutes int `yaml:"interval_minutes,omitempty"`
+}
+
 func (r ResolutionConfig) Clone() ResolutionConfig {
 	return ResolutionConfig{
 		TTLSeconds:     r.TTLSeconds,
 		ClientIdentity: r.ClientIdentity,
+	}
+}
+
+func (v VerifyConfig) Clone() VerifyConfig {
+	return VerifyConfig{
+		IntervalMinutes: v.IntervalMinutes,
 	}
 }
 

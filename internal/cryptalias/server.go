@@ -1,9 +1,12 @@
 package cryptalias
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
+	"time"
 )
 
 const VERSION = 0
@@ -25,6 +28,9 @@ var defaultConfig = &Config{
 			Strategy: ClientIdentityStrategyXFF,
 			Header:   "X-Forwarded-For",
 		},
+	},
+	Verify: VerifyConfig{
+		IntervalMinutes: 5,
 	},
 	Domains: []AliasDomainConfig{
 		{Domain: "127.0.0.1"},
@@ -53,6 +59,7 @@ func Run(configPath string) error {
 	if err := cfg.Validate(); err != nil {
 		return err
 	}
+	verifyInterval := time.Duration(cfg.Verify.IntervalMinutes) * time.Minute
 	InitLogger(cfg.Logging)
 	slog.Info("config loaded", "path", configPath, "base_url", cfg.BaseURL)
 	for _, d := range cfg.Domains {
@@ -60,6 +67,7 @@ func Run(configPath string) error {
 	}
 
 	store := NewConfigStore(configPath, cfg)
+	statuses := NewDomainStatusStore(cfg)
 	resolver, err := NewWalletResolver(configPath)
 	if err != nil {
 		slog.Error("wallet resolver failed to start", "error", err)
@@ -73,18 +81,37 @@ func Run(configPath string) error {
 
 	// Public endpoints only.
 	publicMux := http.NewServeMux()
+	publicMux.HandleFunc("GET /healthz", HealthHandler(statuses))
 	publicMux.HandleFunc("GET /.well-known/cryptalias", WellKnownHandler(store))
 	publicMux.HandleFunc("GET /_cryptalias/keys", JWKSKeysHandler(store))
+	publicMux.HandleFunc("GET /_cryptalias/status", StatusHandler(statuses))
 
-	resolveHandler := http.Handler(AliasResolverHandler(store, resolver))
+	resolveHandler := http.Handler(AliasResolverHandler(store, resolver, statuses))
 	resolveHandler = newRateLimiter(store).middleware(resolveHandler)
 	publicMux.Handle("GET /_cryptalias/resolve/{ticker}/{alias}", resolveHandler)
 
 	publicAddr := fmt.Sprintf(":%d", cfg.PublicPort)
+	publicServer := &http.Server{Handler: publicMux}
+
+	ln, err := net.Listen("tcp", publicAddr)
+	if err != nil {
+		slog.Error("public listen failed", "addr", publicAddr, "error", err)
+		return err
+	}
 
 	slog.Info("public server listening", "addr", publicAddr, "base_url", cfg.BaseURL)
 
-	if err := http.ListenAndServe(publicAddr, publicMux); err != nil {
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- publicServer.Serve(ln)
+	}()
+
+	// Start verification only after the server is actually serving.
+	verifier := newDomainVerifier(store, statuses, verifyInterval)
+	verifier.Start(context.Background())
+	slog.Info("domain verifier started", "interval", verifyInterval.String())
+
+	if err := <-errCh; err != nil {
 		slog.Error("server exited", "error", err)
 		return err
 	}

@@ -16,6 +16,10 @@ resolution:
     strategy: xff
     header: X-Forwarded-For
 
+verify:
+  # How often Cryptalias verifies each configured domain.
+  interval_minutes: 5
+
 domains:
   - domain: cryptalias.localhost
     # Leave keys empty on first run if you want Cryptalias to generate them.

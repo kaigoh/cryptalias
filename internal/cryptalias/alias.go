@@ -26,6 +26,28 @@ type Alias struct {
 	Wallet     WalletAddress
 }
 
+// ParseAliasDomain extracts and validates the domain portion of an alias
+// identifier without checking whether the domain is configured.
+func ParseAliasDomain(input string) (string, error) {
+	inputClean := strings.ToLower(strings.TrimSpace(input))
+	if inputClean == "" {
+		return "", errors.New("empty identifier")
+	}
+	m := re.FindStringSubmatch(inputClean)
+	if m == nil {
+		return "", errors.New("invalid format (expected alias[+tag]$domain)")
+	}
+	if err := validateAliasOrTag(m[1], "alias"); err != nil {
+		return "", err
+	}
+	if m[2] != "" {
+		if err := validateAliasOrTag(m[2], "tag"); err != nil {
+			return "", err
+		}
+	}
+	return m[3], nil
+}
+
 // ParseAlias resolves only static mappings from config.
 func ParseAlias(input string, ticker string, config *Config) (Alias, error) {
 	alias, domainCfg, tickerClean, err := parseAliasIdentifier(input, ticker, config)

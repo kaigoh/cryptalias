@@ -72,12 +72,13 @@ func TestJWKSKeysHandler(t *testing.T) {
 
 func TestAliasResolverHandlerSignsPayload(t *testing.T) {
 	store, resolver := newTestStore(t)
+	statuses := NewDomainStatusStore(store.Get())
 	req := httptest.NewRequest(http.MethodGet, "/_cryptalias/resolve/xmr/demo$127.0.0.1", nil)
 	req.SetPathValue("ticker", "xmr")
 	req.SetPathValue("alias", "demo$127.0.0.1")
 	rr := httptest.NewRecorder()
 
-	AliasResolverHandler(store, resolver).ServeHTTP(rr, req)
+	AliasResolverHandler(store, resolver, statuses).ServeHTTP(rr, req)
 
 	if rr.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rr.Code, rr.Body.String())

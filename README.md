@@ -103,6 +103,10 @@ If you change those, update the matching `username` and `password` in `config.ym
 docker compose up --build
 ```
 
+The compose file includes a health check that hits:
+
+- `http://127.0.0.1:8080/healthz`
+
 ### 5) Test it
 
 With the provided Traefik config, the public endpoint will be routed via:
@@ -140,6 +144,9 @@ resolution:
   client_identity:
     strategy: xff
     header: X-Forwarded-For
+
+verify:
+  interval_minutes: 5
 
 domains:
   - domain: cryptalias.localhost
@@ -336,6 +343,38 @@ endpoint:
   username: user
   password: pass
 ```
+
+## Domain verification and status page
+
+Cryptalias now checks your domains routinely, like a client would.
+
+It verifies things like:
+
+- `/.well-known/cryptalias` responds correctly
+- `/_cryptalias/keys` contains the right key for the domain
+- DNS resolves
+- The `_cryptalias` TXT record matches your configured public key
+
+If a domain fails these checks, Cryptalias will *stop resolving aliases for that domain* until it becomes healthy again.
+
+You can see the current state here:
+
+- `GET /_cryptalias/status`
+- `GET /healthz` (simple liveness check for Docker/ops tooling)
+
+Important difference:
+
+- `/healthz` always returns `200` if the process is running
+- `/_cryptalias/status` tells you whether domains are actually healthy
+
+You can control how often the checks run:
+
+```yaml
+verify:
+  interval_minutes: 5
+```
+
+I recommend leaving this at 5 minutes unless you have a good reason not to.
 
 ## Common mistakes (and how to fix them)
 
