@@ -438,9 +438,7 @@ Cryptalias refuses to start as root.
 - Confirm wallet files exist at configured path
 - Check RPC credentials match in both compose file and config
 
-## Donate
-
-![Monero Donation QR Code](monero-donation-qrcode-small.png)
+## Support
 
 - Ensure endpoint address ends with `/json_rpc`
 - Remember Monero uses HTTP Digest authentication
@@ -470,11 +468,13 @@ Cryptalias refuses to start as root.
 - **Server implementation**: `internal/cryptalias/server.go`
 - **Application entry**: `cmd/cryptalias/main.go`
 
-## Support
+## Donate
 
 If you find Cryptalias useful, donations are gratefully accepted to support ongoing development:
 
 **Monero:** `8BUwkJ4LWiJS7bHAsKxBbaR1dkxzcvMJoNqGeCcLEt42betKeFnnEEA7xEJLBNNA1ngBS4V4pTVt6g8S4XZyePsc1UH5msc`
+
+![Monero Donation QR Code](monero-donation-qrcode-small.png)
 
 ## License
 
