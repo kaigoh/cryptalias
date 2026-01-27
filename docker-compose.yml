@@ -1,5 +1,3 @@
-version: "3.9"
-
 networks:
   cryptalias:
     name: cryptalias
@@ -23,7 +21,8 @@ services:
       - cryptalias
 
   monero-wallet-rpc:
-    image: espejelomar/monero-wallet-rpc:latest
+    image: sethsimmons/simple-monero-wallet-rpc:latest
+    user: 1000:1000
     command:
       - --confirm-external-bind
       - --rpc-bind-ip=0.0.0.0
@@ -37,10 +36,9 @@ services:
       - cryptalias
 
   cryptalias:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ghcr.io/kaigoh/cryptalias:main
     command: ["/config/config.yml"]
+    user: 1000:1000
     healthcheck:
       test:
         [
@@ -52,7 +50,7 @@ services:
       retries: 5
       start_period: 20s
     volumes:
-      - ./config.yml:/config/config.yml
+      - ./cryptalias:/config
     depends_on:
       - monero-wallet-rpc
     networks:

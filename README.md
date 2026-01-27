@@ -1,144 +1,130 @@
-![Cryptalias logo](logo.png)
-
 # Cryptalias
 
-Cryptalias is a human-friendly alias system for crypto addresses.
+![Cryptalias Logo](logo.png)
 
-It keeps the nice `name@domain` style from OpenAlias (though Cryptalias uses `name$domain` to avoid confusion with other protocols), but adds modern safety and privacy features:
+A modern, privacy-focused alias system for cryptocurrency addresses.
 
-- Dynamic addresses (not just fixed ones)
-- Signed responses so clients can verify what they receive
-- A clear path toward database-backed aliases and third-party integrations
+## Overview
 
-## OpenAlias vs Cryptalias (Why this exists)
+Cryptalias provides human-readable aliases (e.g., `alice$example.com`) for cryptocurrency addresses, building upon OpenAlias with enhanced security and privacy features:
 
-OpenAlias is great, but it assumes aliases map to fixed addresses. That can make address reuse and "sniffing" easier.
+- **Dynamic address generation**: Request fresh addresses from wallet services to prevent address reuse
+- **Cryptographic signatures**: All responses are signed for client verification
+- **Per-client address stability**: Same client receives consistent addresses within a configurable TTL window
+- **Extensible architecture**: Support for database-backed aliases and third-party integrations
 
-Cryptalias keeps the same spirit but changes the defaults:
+This project is a reference implementation of the Cryptalias protocol. Other
+implementations can (and should) be built in different languages while remaining
+compatible with the protocol.
 
-- OpenAlias: fixed mappings
-- Cryptalias: fixed _or_ dynamic
+## Why Cryptalias?
 
-What Cryptalias adds on top:
+OpenAlias offers familiar and human-friendly crypto aliases but was designed for static address mappings. Cryptalias maintains the same user-friendly `name@domain` format (using `$` instead of `@` to avoid protocol confusion) while addressing privacy concerns:
 
-- Dynamic resolution: the alias can request a fresh address from a wallet service
-- Per-client stability window: the same client gets the same address for a short time (to reduce sniffing)
-- Signed outputs: responses are signed with your domain key so clients can verify them
-- Protocol details for client and wallet implementers: `PROTOCOL.md`
+**OpenAlias approach:**
 
-Future direction:
+- Fixed address mappings in DNS
 
-- Move alias config into a database
-- Allow third-party integrations (for example: invoice systems that create aliases automatically)
+**Cryptalias approach:**
 
-## Donations
+- Static or dynamic address resolution
+- Per-client stability windows to reduce address sniffing
+- Cryptographically signed responses
+- Clear integration path for external wallet services
 
-If you feel like this will be useful to you, donations will be gratefully recieved to help drive future development work.
+For implementation details, see [PROTOCOL.md](PROTOCOL.md).
 
-Monero: `8BUwkJ4LWiJS7bHAsKxBbaR1dkxzcvMJoNqGeCcLEt42betKeFnnEEA7xEJLBNNA1ngBS4V4pTVt6g8S4XZyePsc1UH5msc`
+## Quick Start
 
-![Monero Donation QR Code](monero-donation-qrcode-small.png)
+### Prerequisites
 
-## Quick start mental model
+- Docker and Docker Compose
+- A domain with DNS access
+- A Monero wallet (for the example configuration)
 
-Your `config.yml` is the control panel. It answers three questions:
+### Installation
 
-1. Where does the app run?
-2. Which names (aliases) do I control?
-3. How do I get wallet addresses for each coin/token?
+1. **Create a config file:**
 
-Good news: the app watches the config file. Edit it, save it, and it reloads automatically. If the new config is invalid, it keeps the last good one.
+   ```bash
+   mkdir -p cryptalias
+   cd cryptalias
+   ```
 
-## The DNS TXT record you should add
+2. **Prepare your wallet:**
 
-Each domain should publish its public key in DNS as a TXT record:
+   Place wallet files in `./monero/wallet/` and configure in
+   `config.yml`:
 
-- Name: `_cryptalias.yourdomain.com`
-- Value: `pubkey=...`
+   ```yaml
+   tokens:
+     - name: Monero
+       tickers: [xmr]
+       endpoint:
+         type: internal
+         address: http://monero-wallet-rpc:18083/json_rpc
+         username: your-username
+         password: your-password
+         wallet_file: main
+         wallet_password: your-wallet-password
+   ```
 
-Cryptalias prints the exact TXT record value:
+   **Note:** Monero requires `/json_rpc` endpoint suffix and uses HTTP Digest authentication.
 
-- When keys are generated
-- When the application starts
-- When the config reloads successfully
+3. **Create a docker-compose file (uses the GHCR image):**
 
-So you can copy the log line directly into your DNS provider.
+   ```yaml
+   services:
+     monero-wallet-rpc:
+       image: sethsimmons/simple-monero-wallet-rpc:latest
+       user: 1000:1000
+       volumes:
+         - ./monero:/home/monero/
+       command:
+         - --confirm-external-bind
+         - --rpc-bind-ip=0.0.0.0
+         - --rpc-bind-port=18083
+         - --rpc-login=${MONERO_RPC_USER:-cryptalias}:${MONERO_RPC_PASS:-change-me}
+         - --wallet-dir=/home/monero/wallet
+         - --daemon-address=${MONERO_DAEMON_ADDRESS:-monerod:18081}
 
-## Docker stack (Cryptalias + Monero + Traefik)
+     cryptalias:
+       image: ghcr.io/kaigoh/cryptalias:main
+       user: 1000:1000
+       volumes:
+         - ./cryptalias:/config
+       command: ["/config/config.yml"]
+   ```
 
-This repo now includes:
+   This assumes `monerod` is reachable as `monerod:18081` from the wallet RPC
+   container. Adjust `--daemon-address` to match your setup. You can also
+   override defaults via environment variables:
+   - `MONERO_DAEMON_ADDRESS`
+   - `MONERO_RPC_USER`
+   - `MONERO_RPC_PASS`
 
-- `Dockerfile`
-- `docker-compose.yml`
-- `config.example.yml`
+4. **Start the stack:**
 
-### 1) Copy the sample config
+   ```bash
+   docker compose up --build
+   ```
 
-```bash
-cp config.example.yml config.yml
-```
+5. **Configure DNS:**
 
-Important: keep `config.yml` writable. Cryptalias may generate keys and save them back into the file.
+   Cryptalias generates cryptographic keys automatically. Copy the DNS TXT record from the logs:
 
-### 2) Prepare a Monero wallet
+   ```
+   _cryptalias.yourdomain.com TXT "pubkey=..."
+   ```
 
-The sample stack mounts `./monero` into the wallet RPC container as `/wallets`.
+6. **Test resolution:**
+   ```
+   http://cryptalias.localhost/_cryptalias/resolve/xmr/me$cryptalias.localhost
+   ```
 
-That means you should:
+## Configuration
 
-- create your wallet files under `./monero`, and
-- set `wallet_file:` and `wallet_password:` in `config.yml` to match
-- use the `monero-wallet-rpc` login credentials in `username:` and `password:`
-
-Monero gotcha: the wallet RPC endpoint must include `/json_rpc`, and it uses
-HTTP Digest auth (not Basic auth).
-
-### 3) Configure the Monero daemon address
-
-The compose file expects a daemon at `monerod:18081` by default. If yours lives elsewhere, set an environment variable:
-
-```bash
-export MONERO_DAEMON_ADDRESS=your-monerod-host:18081
-```
-
-You can also change the default credentials used by `monero-wallet-rpc`:
-
-```bash
-export MONERO_RPC_USER=cryptalias
-export MONERO_RPC_PASS=change-me
-```
-
-If you change those, update the matching `username` and `password` in `config.yml` too.
-
-### 4) Start the stack
-
-```bash
-docker compose up --build
-```
-
-The compose file includes a health check that hits:
-
-- `http://127.0.0.1:8080/healthz`
-
-### 5) Test it
-
-With the provided Traefik config, the public endpoint will be routed via:
-
-- `http://cryptalias.localhost`
-
-For example:
-
-```text
-http://cryptalias.localhost/_cryptalias/resolve/xmr/me$cryptalias.localhost
-```
-
-### Notes on the sample stack
-
-- Traefik routes the public port (`8080`)
-
-## Minimal example config
-
-This is the same shape as `config.example.yml`, shown inline for convenience:
+### Minimal Configuration Example
 
 ```yaml
 base_url: http://cryptalias.localhost
@@ -182,46 +168,24 @@ tokens:
       wallet_password: change-me-wallet
 ```
 
-Important: for Monero, `address` must end with `/json_rpc`.
+The configuration file is monitored for changes and reloads automatically. Invalid configurations are rejected, preserving the last valid state.
 
-## Client identity (very important)
+### Client Identity Strategies
 
-Cryptalias needs a way to decide what "the same client" means. It uses this in two places:
+Cryptalias uses client identity for both rate limiting and address stability. Choose the strategy that matches your deployment:
 
-- Per-client address stability (the TTL cache)
-- Rate limiting
+| Strategy         | Use Case                       | Configuration                                   |
+| ---------------- | ------------------------------ | ----------------------------------------------- |
+| `remote_address` | Direct connections (no proxy)  | Uses TCP connection IP                          |
+| `xff`            | Behind reverse proxy (default) | Uses `X-Forwarded-For` header                   |
+| `xff_ua`         | Shared IPs (office NAT, etc.)  | Combines `X-Forwarded-For` with user agent hash |
+| `header`         | Custom proxy setup             | Uses specified header                           |
+| `header_ua`      | Custom proxy + shared IPs      | Combines custom header with user agent hash     |
 
-This is what `resolution.client_identity` controls.
+**Reverse proxy examples:**
 
-### Strategies (what the options mean)
-
-- `remote_address`: use the IP address of the direct TCP connection
-- `xff`: use the first value from `X-Forwarded-For`
-- `xff_ua`: use `X-Forwarded-For` plus a hashed user agent
-- `header`: use a custom header you choose
-- `header_ua`: use your custom header plus a hashed user agent
-
-Notes:
-
-- `xff` is the default because most deployments sit behind a reverse proxy
-- If you use `header` or `header_ua`, you must set `client_identity.header`
-
-### Copy/paste examples
-
-#### Not behind a reverse proxy
-
-If clients connect directly to Cryptalias, use `remote_address`:
-
-```yaml
-resolution:
-  ttl_seconds: 60
-  client_identity:
-    strategy: remote_address
-```
-
-#### Behind Traefik
-
-Traefik sets `X-Forwarded-For`, so `xff` is usually correct:
+<details>
+<summary>Traefik</summary>
 
 ```yaml
 resolution:
@@ -231,19 +195,10 @@ resolution:
     header: X-Forwarded-For
 ```
 
-If you expect many users behind the same IP (for example, office NAT), you can tighten it a bit:
+</details>
 
-```yaml
-resolution:
-  ttl_seconds: 60
-  client_identity:
-    strategy: xff_ua
-    header: X-Forwarded-For
-```
-
-#### Behind Caddy
-
-Caddy also sets `X-Forwarded-For`, so the Traefik config works well here too:
+<details>
+<summary>Nginx</summary>
 
 ```yaml
 resolution:
@@ -252,64 +207,53 @@ resolution:
     strategy: xff
     header: X-Forwarded-For
 ```
-
-#### Behind Nginx
-
-For Nginx, the Cryptalias side still looks like this:
-
-```yaml
-resolution:
-  ttl_seconds: 60
-  client_identity:
-    strategy: xff
-    header: X-Forwarded-For
-```
-
-But you must also make sure Nginx forwards the header. A typical Nginx snippet looks like this:
 
 ```nginx
 proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
 proxy_set_header X-Real-IP $remote_addr;
 ```
 
-### Quick rule of thumb
+</details>
 
-- No proxy: `remote_address`
-- Any normal proxy: `xff`
-- Lots of shared IPs: `xff_ua`
+<details>
+<summary>Caddy</summary>
 
-## Static vs dynamic aliases
+```yaml
+resolution:
+  ttl_seconds: 60
+  client_identity:
+    strategy: xff
+    header: X-Forwarded-For
+```
 
-You have two modes per alias:
+</details>
 
-Static alias (fixed address)
+### Static vs Dynamic Aliases
+
+**Static alias** (returns fixed address):
 
 ```yaml
 wallet:
   ticker: xmr
-  address: 89abc...
+  address: "89abc..."
 ```
 
-Dynamic alias (fresh address from a wallet service)
+**Dynamic alias** (requests fresh address from wallet):
 
 ```yaml
 wallet:
   ticker: xmr
   address: ""
+  account_index: 0
 ```
 
-- If `address` is filled in, that exact address is returned.
-- If `address` is empty, the wallet service is asked for an address.
+### Account Management
 
-## Per-alias account selection (important)
-
-Account selection lives on the alias, not the endpoint.
-
-That means you can do this:
+Configure multiple aliases using different wallet accounts:
 
 ```yaml
 aliases:
-  - alias: me
+  - alias: personal
     wallet:
       ticker: xmr
       address: ""
@@ -319,99 +263,59 @@ aliases:
     wallet:
       ticker: xmr
       address: ""
-      account_index: 10
+      account_index: 1
 ```
 
-Optional alias routing hints you can set:
+Optional routing parameters: `account_index`, `account_id`, `wallet_id`
 
-- `account_index`
-- `account_id`
-- `wallet_id`
+### External Wallet Services
 
-They are forwarded to wallet services over gRPC, but are optional.
-
-## External wallet services (gRPC plugins)
-
-For external services, set:
+Integrate external wallet services via gRPC:
 
 ```yaml
 endpoint:
   type: external
-  address: wallet-xmr:50051
+  address: wallet-service:50051
+  token: "authentication-token" # Optional
 ```
 
-Auth options if needed:
+See `proto/cryptalias/v1/wallet_service.proto` for the gRPC contract.
 
-```yaml
-endpoint:
-  type: external
-  address: wallet-xmr:50051
-  token: "super-secret-token"
-```
+## Deployment
 
-or:
+### Reverse Proxy Configuration
 
-```yaml
-endpoint:
-  type: external
-  address: wallet-xmr:50051
-  username: user
-  password: pass
-```
+Cryptalias requires two routing paths:
 
-## Domain verification and status page
+1. **Discovery endpoint** on your domain: `/.well-known/cryptalias/`
+2. **Resolution endpoint** on Cryptalias host: `/_cryptalias/`
 
-Cryptalias now checks your domains routinely, like a client would.
-
-It verifies things like:
-
-- `/.well-known/cryptalias/configuration` responds correctly
-- `/.well-known/cryptalias/keys` serves the right key for the domain
-- DNS resolves
-- The `_cryptalias` TXT record matches your configured public key
-
-Very important hosting rule:
-
-- `https://yourdomain.com/.well-known/cryptalias/configuration` must be served by the domain being resolved
-- `/_cryptalias/*` must be served by the Cryptalias host (for example `https://cryptalias.yourdomain.com/_cryptalias/...`)
-- Correct example: discovery at `https://example.com/.well-known/cryptalias/configuration`
-- Correct example: resolution at `https://cryptalias.example.com/_cryptalias/resolve/xmr/alice$example.com`
-- Not required: `https://example.com/_cryptalias/resolve/...`
-
-### Reverse proxy routing examples (the important bit)
-
-Your proxy needs to do two different things:
-
-- On each resolved domain, forward `/.well-known/cryptalias/` to Cryptalias
-- On the Cryptalias host, forward `/_cryptalias/*` to Cryptalias
-
-Below are minimal examples that show the intent clearly.
-
-#### Traefik (labels)
-
-These routers can sit on the `cryptalias` service.
+<details>
+<summary>Traefik Example</summary>
 
 ```yaml
 labels:
   - traefik.enable=true
 
-  # 1) Discovery on the resolved domain
+  # Discovery on resolved domain
   - traefik.http.routers.cryptalias-wellknown.rule=Host(`example.com`) && PathPrefix(`/.well-known/cryptalias/`)
   - traefik.http.routers.cryptalias-wellknown.entrypoints=websecure
-  - traefik.http.routers.cryptalias-wellknown.tls=true
+  - traefik.http.routers.cryptalias-wellknown.tls.certresolver=letsencrypt
   - traefik.http.routers.cryptalias-wellknown.service=cryptalias-svc
 
-  # 2) Resolution on the Cryptalias host
+  # Resolution on Cryptalias host
   - traefik.http.routers.cryptalias-public.rule=Host(`cryptalias.example.com`) && PathPrefix(`/_cryptalias/`)
   - traefik.http.routers.cryptalias-public.entrypoints=websecure
-  - traefik.http.routers.cryptalias-public.tls=true
+  - traefik.http.routers.cryptalias-public.tls.certresolver=letsencrypt
   - traefik.http.routers.cryptalias-public.service=cryptalias-svc
 
-  # Service target
   - traefik.http.services.cryptalias-svc.loadbalancer.server.port=8080
 ```
 
-#### Caddy
+</details>
+
+<details>
+<summary>Caddy Example</summary>
 
 ```caddyfile
 example.com {
@@ -425,7 +329,10 @@ cryptalias.example.com {
 }
 ```
 
-#### Nginx
+</details>
+
+<details>
+<summary>Nginx Example</summary>
 
 ```nginx
 server {
@@ -451,98 +358,131 @@ server {
 }
 ```
 
-If a domain fails these checks, Cryptalias will _stop resolving aliases for that domain_ until it becomes healthy again.
+</details>
 
-You can see the current state here:
+### Domain Verification
 
-- `GET /.well-known/cryptalias/status`
-- `GET /healthz` (simple liveness check for Docker/ops tooling)
+Cryptalias performs periodic health checks on configured domains:
 
-Important difference:
+- Validates `/.well-known/cryptalias/configuration` endpoint
+- Verifies `/.well-known/cryptalias/keys` serves correct public key
+- Checks DNS `_cryptalias` TXT record
 
-- `/healthz` always returns `200` if the process is running
-- `/.well-known/cryptalias/status` tells you whether that domain is healthy
+**Domains failing verification will not resolve aliases** until health checks pass.
 
-You can control how often the checks run:
+**Monitoring endpoints:**
+
+- `GET /.well-known/cryptalias/status` - Domain health status
+- `GET /healthz` - Service liveness check
+
+Configure verification interval:
 
 ```yaml
 verify:
   interval_minutes: 5
 ```
 
-I recommend leaving this at 5 minutes unless you have a good reason not to.
+## Security Considerations
 
-## Common mistakes (and how to fix them)
+### Important Security Notes
 
-"unknown alias" (404)
+⚠️ **Never run Cryptalias or wallet services as root.** Use dedicated, unprivileged users (UID/GID 1000+).
+Cryptalias refuses to start as root.
 
-- The domain in the URL must match `domains[].domain`
-- The alias must exist under that domain
-- The ticker must exist in `tokens[].tickers`
-- The alias format must be `alias$domain` or `alias+tag$domain`
+⚠️ **Use hot wallets only.** Cryptalias should never connect to cold storage. Monitor and sweep balances regularly.
 
-It keeps reloading but nothing changes
+⚠️ **Keep wallet balances minimal.** Treat the wallet as disposable in case of compromise.
 
-- Check logs for: `config reload rejected`
-- That means validation failed and the old config is still active
+### Built-in Security Features
 
-Everything seems to come from the same client
+- **Rate limiting**: Prevents scraping and spam (configurable per-minute limits)
+- **Address caching**: Per-client TTL reduces address enumeration
+- **Cryptographic signatures**: All responses include domain key signatures for client verification
 
-- You probably have the wrong `client_identity.strategy` for your setup
-- No proxy: use `remote_address`
-- Behind a proxy: use `xff` (and make sure the proxy forwards the header)
+## Troubleshooting
 
-Dynamic alias calls the wallet when you expected static
+### Common Issues
 
-- Static requires `wallet.address` to be non-empty
-- Empty string means dynamic
+**"Unknown alias" (404 error)**
 
-YAML error: "cannot unmarshal !!seq into cryptalias.WalletAddress"
+- Verify domain matches `domains[].domain` in config
+- Ensure alias exists under that domain
+- Confirm ticker is defined in `tokens[].tickers`
+- Check alias format: `alias$domain` or `alias+tag$domain`
 
-- This usually means something that should be a map/object is written as a list
-- For example, `wallet:` should look like:
+**Config changes not taking effect**
 
-```yaml
-wallet:
-  ticker: xmr
-  address: 89abc...
+- Check logs for "config reload rejected"
+- Validation errors preserve the previous valid configuration
+- Review YAML syntax and required fields
+
+**All requests appear to come from same client**
+
+- Incorrect `client_identity.strategy` for your deployment
+- Direct connections require `remote_address`
+- Proxied deployments require `xff` with proper header forwarding
+
+**Dynamic alias not working**
+
+- Static mode requires non-empty `wallet.address`
+- Empty `address` field triggers dynamic resolution
+
+**YAML unmarshaling errors**
+
+- Ensure objects are formatted as maps, not lists
+- Example: `wallet:` should be a single object, not an array
+
+**Monero wallet RPC failures**
+
+- Verify wallet RPC can connect to daemon
+- Confirm wallet files exist at configured path
+- Check RPC credentials match in both compose file and config
+
+## Donate
+
+![Monero Donation QR Code](monero-donation-qrcode-small.png)
+
+- Ensure endpoint address ends with `/json_rpc`
+- Remember Monero uses HTTP Digest authentication
+
+**Signature verification failures**
+
+- Confirm both `private_key` and `public_key` are set for each domain
+- Copy DNS TXT record from logs if keys were auto-generated
+- Verify DNS propagation of `_cryptalias` TXT record
+
+## Development
+
+### Project Structure
+
+```
+├── cmd/cryptalias/          # Main application entry point
+├── internal/cryptalias/     # Core server implementation
+├── proto/cryptalias/v1/     # gRPC protocol definitions
+├── config.example.yml       # Example configuration
+├── docker-compose.yml       # Docker stack definition
+└── PROTOCOL.md             # Protocol specification
 ```
 
-...not:
+### Integration Points
 
-```yaml
-wallet:
-  - ticker: xmr
-    address: 89abc...
-```
+- **gRPC contract**: `proto/cryptalias/v1/wallet_service.proto`
+- **Server implementation**: `internal/cryptalias/server.go`
+- **Application entry**: `cmd/cryptalias/main.go`
 
-Signing or verification fails
+## Support
 
-- Make sure each domain has both `private_key` and `public_key`
-- If keys were generated automatically, copy the DNS TXT record from the logs
+If you find Cryptalias useful, donations are gratefully accepted to support ongoing development:
 
-Monero wallet RPC errors (500s)
+**Monero:** `8BUwkJ4LWiJS7bHAsKxBbaR1dkxzcvMJoNqGeCcLEt42betKeFnnEEA7xEJLBNNA1ngBS4V4pTVt6g8S4XZyePsc1UH5msc`
 
-- Make sure `monero-wallet-rpc` can reach a daemon
-- Make sure the wallet file exists in `./monero`
-- Make sure the RPC username/password match both compose and `config.yml`
-- Make sure the endpoint `address` ends with `/json_rpc`
-- Remember Monero uses HTTP Digest auth
+## License
 
-## Notes on safety features
+See [LICENSE](LICENSE) for details.
 
-Two built-in protections are on by default:
+## Roadmap
 
-1. Rate limiting: reduces scraping/spam
-2. Per-client TTL cache: reduces address sniffing
-
-These live under:
-
-- `rate_limit`
-- `resolution`
-
-## Where to look next (if you are integrating)
-
-- gRPC contract: `proto/cryptalias/v1/wallet_service.proto`
-- Main entrypoint: `cmd/cryptalias/main.go`
-- Core runtime: `internal/cryptalias/server.go`
+- Database-backed alias configuration
+- Third-party integration APIs
+- Additional cryptocurrency support
+- Automated invoice system integration
