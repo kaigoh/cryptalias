@@ -437,9 +437,6 @@ Cryptalias refuses to start as root.
 - Verify wallet RPC can connect to daemon
 - Confirm wallet files exist at configured path
 - Check RPC credentials match in both compose file and config
-
-## Support
-
 - Ensure endpoint address ends with `/json_rpc`
 - Remember Monero uses HTTP Digest authentication
 
