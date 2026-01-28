@@ -50,6 +50,9 @@ func runResolve(args []string) error {
 	if alias == "" || ticker == "" {
 		return fmt.Errorf("alias and ticker are required")
 	}
+	if !strings.Contains(alias, "$") {
+		return fmt.Errorf("alias must be in the format alias$domain (tip: wrap in single quotes to avoid shell expansion)")
+	}
 
 	address, err := cryptalias.ResolveAddress(context.Background(), ticker, alias)
 	if err != nil {

@@ -44,13 +44,13 @@ Each client verifies signatures and enforces `expires`.
 The `cryptalias` binary can act as a one-shot resolver without starting the server:
 
 ```bash
-cryptalias resolve "alice$example.com" xmr
+cryptalias resolve 'alice$example.com' xmr
 ```
 
 Add `--json` for structured output:
 
 ```bash
-cryptalias resolve --json "alice$example.com" xmr
+cryptalias resolve --json 'alice$example.com' xmr
 ```
 
 ## Quick Start
