@@ -1,4 +1,4 @@
-package cryptaliasclient
+package cryptalias
 
 import (
 	"context"

@@ -36,8 +36,22 @@ For implementation details, see [PROTOCOL.md](PROTOCOL.md).
 
 ## Client libraries
 
-Minimal HTTP client helpers are available in `clients/` (JavaScript, TypeScript, Go, Rust, Dart, C++, Swift, Kotlin).
+Minimal HTTP client helpers are available in `clients/` (JavaScript, TypeScript, Rust, Dart, C++, Swift, Kotlin). The Go resolver lives in `internal/cryptalias/resolve.go`.
 Each client verifies signatures and enforces `expires`.
+
+## Built-in resolver
+
+The `cryptalias` binary can act as a one-shot resolver without starting the server:
+
+```bash
+cryptalias resolve "alice$example.com" xmr
+```
+
+Add `--json` for structured output:
+
+```bash
+cryptalias resolve --json "alice$example.com" xmr
+```
 
 ## Quick Start
 
@@ -370,7 +384,7 @@ server {
 Cryptalias performs periodic health checks on configured domains:
 
 - Validates `/.well-known/cryptalias/configuration` endpoint
-- Verifies `/.well-known/cryptalias/keys` serves correct public key
+- Verifies the public key in `/.well-known/cryptalias/configuration` matches the domain key
 - Checks DNS `_cryptalias` TXT record
 
 **Domains failing verification will not resolve aliases** until health checks pass.

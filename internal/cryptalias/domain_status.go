@@ -16,7 +16,6 @@ type DomainStatus struct {
 	LastChecked time.Time `json:"last_checked"`
 
 	WellKnownOK bool `json:"well_known_ok"`
-	JWKSOK      bool `json:"jwks_ok"`
 	DNSResolves bool `json:"dns_resolves"`
 	DNSTXTOK    bool `json:"dns_txt_ok"`
 }

@@ -83,7 +83,6 @@ func Run(configPath string) error {
 	publicMux := http.NewServeMux()
 	publicMux.HandleFunc("GET /healthz", HealthHandler(statuses))
 	publicMux.HandleFunc("GET /.well-known/cryptalias/configuration", WellKnownHandler(store))
-	publicMux.HandleFunc("GET /.well-known/cryptalias/keys", WellKnownKeysHandler(store))
 	publicMux.HandleFunc("GET /.well-known/cryptalias/status", WellKnownStatusHandler(store, statuses))
 
 	resolveHandler := http.Handler(AliasResolverHandler(store, resolver, statuses))

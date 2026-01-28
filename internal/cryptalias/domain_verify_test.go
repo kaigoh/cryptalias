@@ -32,8 +32,6 @@ func TestDomainVerifierHealthy(t *testing.T) {
 		switch r.URL.Path {
 		case "/.well-known/cryptalias/configuration":
 			WellKnownHandler(store).ServeHTTP(w, r)
-		case "/.well-known/cryptalias/keys":
-			WellKnownKeysHandler(store).ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -63,7 +61,7 @@ func TestDomainVerifierHealthy(t *testing.T) {
 	if !status.Healthy {
 		t.Fatalf("expected healthy domain, got unhealthy: %s", status.Message)
 	}
-	if !status.WellKnownOK || !status.JWKSOK || !status.DNSResolves || !status.DNSTXTOK {
+	if !status.WellKnownOK || !status.DNSResolves || !status.DNSTXTOK {
 		t.Fatalf("expected all checks to pass: %+v", status)
 	}
 }

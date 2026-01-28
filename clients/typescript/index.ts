@@ -65,7 +65,12 @@ async function verifyJwsAndDecodePayload(jws: string, jwk: JsonWebKey): Promise<
   const signingInput = new TextEncoder().encode(`${parts[0]}.${parts[1]}`);
   const signature = base64UrlToBytes(parts[2]);
   const key = await crypto.subtle.importKey("jwk", jwk, { name: "Ed25519" }, false, ["verify"]);
-  const ok = await crypto.subtle.verify({ name: "Ed25519" }, key, signature, signingInput);
+  const ok = await crypto.subtle.verify(
+    { name: "Ed25519" },
+    key,
+    toArrayBuffer(signature),
+    toArrayBuffer(signingInput)
+  );
   if (!ok) {
     throw new Error("signature verification failed");
   }
@@ -77,6 +82,10 @@ function base64UrlToBytes(input: string): Uint8Array {
   let b64 = input.replace(/-/g, "+").replace(/_/g, "/");
   while (b64.length % 4 !== 0) b64 += "=";
   return new Uint8Array(Buffer.from(b64, "base64"));
+}
+
+function toArrayBuffer(value: Uint8Array): ArrayBuffer {
+  return value.buffer.slice(value.byteOffset, value.byteOffset + value.byteLength);
 }
 
 function enforceExpires(value: string): void {

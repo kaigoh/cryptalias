@@ -14,7 +14,6 @@ Each client:
 Languages:
 - JavaScript: `clients/javascript`
 - TypeScript: `clients/typescript`
-- Go: `clients/go`
 - Rust: `clients/rust`
 - Dart: `clients/dart`
 - C++: `clients/cpp`

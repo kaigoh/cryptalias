@@ -6,10 +6,9 @@ If you are just operating the server, most of this is handled for you. If you ar
 
 ## Big picture
 
-Cryptalias uses three public HTTP endpoints:
+Cryptalias uses two public HTTP endpoints:
 
 - `GET /.well-known/cryptalias/configuration`
-- `GET /.well-known/cryptalias/keys`
 - `GET /_cryptalias/resolve/{ticker}/{alias}`
 
 And two operational endpoints:
@@ -209,10 +208,6 @@ Important:
 
 - `/healthz` is for containers and load balancers
 - `/.well-known/cryptalias/status` is for humans and diagnostics
-
-## Keys endpoint (important)
-
-`/.well-known/cryptalias/keys` is domain-scoped and returns only that domain's key.
 
 ## Security notes for clients
 

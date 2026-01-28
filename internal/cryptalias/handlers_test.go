@@ -41,32 +41,6 @@ func TestWellKnownHandler(t *testing.T) {
 	}
 }
 
-func TestWellKnownKeysHandler(t *testing.T) {
-	store, _ := newTestStore(t)
-	req := httptest.NewRequest(http.MethodGet, "/.well-known/cryptalias/keys", nil)
-	req.Host = "127.0.0.1"
-	rr := httptest.NewRecorder()
-
-	WellKnownKeysHandler(store).ServeHTTP(rr, req)
-
-	if rr.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d: %s", rr.Code, rr.Body.String())
-	}
-	if ct := rr.Header().Get("Content-Type"); ct != "application/json" {
-		t.Fatalf("expected application/json content-type, got %q", ct)
-	}
-	var body struct {
-		Domain string `json:"domain"`
-		Key    any    `json:"key"`
-	}
-	if err := json.Unmarshal(rr.Body.Bytes(), &body); err != nil {
-		t.Fatalf("decode response: %v", err)
-	}
-	if body.Domain != "127.0.0.1" || body.Key == nil {
-		t.Fatalf("unexpected body: %+v", body)
-	}
-}
-
 func TestWellKnownStatusHandler(t *testing.T) {
 	store, _ := newTestStore(t)
 	statuses := NewDomainStatusStore(store.Get())

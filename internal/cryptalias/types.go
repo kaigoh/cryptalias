@@ -8,7 +8,6 @@ import (
 
 type AliasResolver struct {
 	ResolverEndpoint string `json:"resolver_endpoint"`
-	KeysEndpoint     string `json:"keys_endpoint,omitempty"`
 }
 
 type AliasResolverMode string
@@ -19,8 +18,8 @@ const (
 )
 
 type WalletAddress struct {
-	Ticker       string  `json:"ticker" yaml:"ticker"`
-	Address      string  `json:"address" yaml:"address"`
+	Ticker  string `json:"ticker" yaml:"ticker"`
+	Address string `json:"address" yaml:"address"`
 	// Optional alias-local routing hints forwarded to wallet services over gRPC.
 	// These are intentionally optional so integrations can ignore them.
 	AccountIndex *uint64 `json:"account_index,omitempty" yaml:"account_index,omitempty"`
