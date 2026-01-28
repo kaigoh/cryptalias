@@ -488,7 +488,7 @@ Cryptalias refuses to start as root.
 
 If you find Cryptalias useful, donations are gratefully accepted to support ongoing development:
 
-**Monero:** `8BUwkJ4LWiJS7bHAsKxBbaR1dkxzcvMJoNqGeCcLEt42betKeFnnEEA7xEJLBNNA1ngBS4V4pTVt6g8S4XZyePsc1UH5msc`
+**Monero:** `8BUwkJ4LWiJS7bHAsKxBbaR1dkxzcvMJoNqGeCcLEt42betKeFnnEEA7xEJLBNNA1ngBS4V4pTVt6g8S4XZyePsc1UH5msc` / `donations$cryptalias.xyz`
 
 ![Monero Donation QR Code](monero-donation-qrcode-small.png)
 
