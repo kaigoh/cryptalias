@@ -1,0 +1,15 @@
+{
+  "jwk": {
+    "kty": "OKP",
+    "crv": "Ed25519",
+    "x": "rftb5I-OSvdc96MzyV4v9Eah3cmMq48_a1yEqORa6EI"
+  },
+  "jws": "eyJhbGciOiJFZERTQSJ9.eyJhZGRyZXNzIjoiNDRBRkZxNWtTaUdCb1ouLi4iLCJleHBpcmVzIjoiMjA5OS0wMS0wMVQwMDowMDowMFoiLCJub25jZSI6InRlc3Qtbm9uY2UiLCJ0aWNrZXIiOiJ4bXIiLCJ2ZXJzaW9uIjowfQ.6gPeiHD46POWzZagwB9HrBnejnb5Ef5W6El5v8Y5lxDurDL0DenHlAOPjrfFKSWz9wk0KyXC6noknKofswtgAQ",
+  "payload": {
+    "address": "44AFFq5kSiGBoZ...",
+    "expires": "2099-01-01T00:00:00Z",
+    "nonce": "test-nonce",
+    "ticker": "xmr",
+    "version": 0
+  }
+}

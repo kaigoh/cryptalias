@@ -34,6 +34,11 @@ OpenAlias offers familiar and human-friendly crypto aliases but was designed for
 
 For implementation details, see [PROTOCOL.md](PROTOCOL.md).
 
+## Client libraries
+
+Minimal HTTP client helpers are available in `clients/` (JavaScript, TypeScript, Go, Rust, Dart, C++, Swift, Kotlin).
+Each client verifies signatures and enforces `expires`.
+
 ## Quick Start
 
 ### Prerequisites
