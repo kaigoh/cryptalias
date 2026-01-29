@@ -1,4 +1,7 @@
-export async function resolveAddress(ticker: string, alias: string): Promise<string> {
+export async function resolveAddress(
+  ticker: string,
+  alias: string,
+): Promise<string> {
   if (!ticker || !alias) {
     throw new Error("ticker and alias are required");
   }
@@ -7,7 +10,10 @@ export async function resolveAddress(ticker: string, alias: string): Promise<str
   const configUrl = `https://${domain}/.well-known/cryptalias/configuration`;
 
   const config = await fetchJson(configUrl);
-  const resolver = (config?.resolver?.resolver_endpoint || "").replace(/\/+$/, "");
+  const resolver = (config?.resolver?.resolver_endpoint || "").replace(
+    /\/+$/,
+    "",
+  );
   if (!resolver) {
     throw new Error("missing resolver_endpoint in configuration");
   }
@@ -51,25 +57,28 @@ async function fetchText(url: string): Promise<string> {
   return res.text();
 }
 
-function base64UrlToBase64(input: string): string {
-  let b64 = input.replace(/-/g, "+").replace(/_/g, "/");
-  while (b64.length % 4 !== 0) b64 += "=";
-  return b64;
-}
-
-async function verifyJwsAndDecodePayload(jws: string, jwk: JsonWebKey): Promise<any> {
+async function verifyJwsAndDecodePayload(
+  jws: string,
+  jwk: JsonWebKey,
+): Promise<any> {
   const parts = jws.split(".");
   if (parts.length !== 3) {
     throw new Error("invalid JWS format");
   }
   const signingInput = new TextEncoder().encode(`${parts[0]}.${parts[1]}`);
   const signature = base64UrlToBytes(parts[2]);
-  const key = await crypto.subtle.importKey("jwk", jwk, { name: "Ed25519" }, false, ["verify"]);
+  const key = await crypto.subtle.importKey(
+    "jwk",
+    jwk,
+    { name: "Ed25519" },
+    false,
+    ["verify"],
+  );
   const ok = await crypto.subtle.verify(
     { name: "Ed25519" },
     key,
     toArrayBuffer(signature),
-    toArrayBuffer(signingInput)
+    toArrayBuffer(signingInput),
   );
   if (!ok) {
     throw new Error("signature verification failed");
@@ -81,11 +90,25 @@ async function verifyJwsAndDecodePayload(jws: string, jwk: JsonWebKey): Promise<
 function base64UrlToBytes(input: string): Uint8Array {
   let b64 = input.replace(/-/g, "+").replace(/_/g, "/");
   while (b64.length % 4 !== 0) b64 += "=";
-  return new Uint8Array(Buffer.from(b64, "base64"));
+  if (typeof atob === "function") {
+    const bin = atob(b64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return bytes;
+  }
+  const bufferCtor = (globalThis as any).Buffer;
+  if (bufferCtor) {
+    const buf = bufferCtor.from(b64, "base64");
+    return new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength);
+  }
+  throw new Error("base64 decoder not available");
 }
 
 function toArrayBuffer(value: Uint8Array): ArrayBuffer {
-  return value.buffer.slice(value.byteOffset, value.byteOffset + value.byteLength);
+  return value.buffer.slice(
+    value.byteOffset,
+    value.byteOffset + value.byteLength,
+  );
 }
 
 function enforceExpires(value: string): void {
