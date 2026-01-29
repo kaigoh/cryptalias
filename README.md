@@ -401,6 +401,16 @@ verify:
   interval_minutes: 5
 ```
 
+### CORS for Browser Clients
+
+Browser-based resolvers need CORS headers on the public resolver endpoint (`/_cryptalias/...`). Cryptalias sets permissive CORS for the resolver:
+
+- `Access-Control-Allow-Origin: *`
+- `Access-Control-Allow-Methods: GET, OPTIONS`
+- `Access-Control-Allow-Headers: Accept, Content-Type`
+
+This is intentional so any origin can resolve aliases. If you lock this down, browser clients on other domains will fail.
+
 ## Security Considerations
 
 ### Important Security Notes

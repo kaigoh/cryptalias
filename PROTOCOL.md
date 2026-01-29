@@ -223,6 +223,16 @@ Clients SHOULD:
 - Pin or cache domain keys with care
 - Surface signature failures clearly to users
 
+## CORS for browser-based resolvers
+
+Resolver endpoints under `/_cryptalias/...` MUST return permissive CORS headers so browser clients can read responses:
+
+- `Access-Control-Allow-Origin: *`
+- `Access-Control-Allow-Methods: GET, OPTIONS`
+- `Access-Control-Allow-Headers: Accept, Content-Type`
+
+If these headers are missing or locked down, browser-based resolution will fail.
+
 ## Wallet integrations over gRPC
 
 Cryptalias resolves dynamic aliases by calling a gRPC wallet service.
