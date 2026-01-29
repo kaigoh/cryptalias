@@ -82,8 +82,12 @@ func Run(configPath string) error {
 	// Public endpoints only.
 	publicMux := http.NewServeMux()
 	publicMux.HandleFunc("GET /healthz", HealthHandler(statuses))
-	publicMux.HandleFunc("GET /.well-known/cryptalias/configuration", WellKnownHandler(store))
-	publicMux.HandleFunc("GET /.well-known/cryptalias/status", WellKnownStatusHandler(store, statuses))
+	wellKnownHandler := corsMiddleware(WellKnownHandler(store))
+	wellKnownStatusHandler := corsMiddleware(WellKnownStatusHandler(store, statuses))
+	publicMux.Handle("GET /.well-known/cryptalias/configuration", wellKnownHandler)
+	publicMux.Handle("OPTIONS /.well-known/cryptalias/configuration", wellKnownHandler)
+	publicMux.Handle("GET /.well-known/cryptalias/status", wellKnownStatusHandler)
+	publicMux.Handle("OPTIONS /.well-known/cryptalias/status", wellKnownStatusHandler)
 
 	resolveHandler := http.Handler(AliasResolverHandler(store, resolver, statuses))
 	resolveHandler = newRateLimiter(store).middleware(resolveHandler)
