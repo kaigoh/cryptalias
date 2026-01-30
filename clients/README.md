@@ -8,7 +8,7 @@ Important:
 Each client:
 1) Parses `[ticker:]alias$domain`
 2) Fetches `/.well-known/cryptalias/configuration` from the domain
-3) Calls `/_cryptalias/resolve/{ticker}/{alias}` on the resolver
+3) Calls `/_cryptalias/resolve/{ticker}/{alias}` on the resolver (or `/_cryptalias/resolve/{alias}` when the alias includes a `ticker:` prefix)
 4) Decodes the JWS payload and returns `address`
 
 Languages:

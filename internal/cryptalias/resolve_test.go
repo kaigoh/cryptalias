@@ -17,7 +17,7 @@ type testData struct {
 
 func loadTestData(t *testing.T) testData {
 	t.Helper()
-	path := filepath.Join("..", "testdata", "jws.json")
+	path := filepath.Join("..", "..", "clients", "testdata", "jws.json")
 	data, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("read test data: %v", err)
