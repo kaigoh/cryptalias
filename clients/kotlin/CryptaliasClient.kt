@@ -16,6 +16,11 @@ object CryptaliasClient {
       throw IllegalArgumentException("ticker and alias are required")
     }
 
+    val tickerClean = normalizeTicker(ticker)
+    val prefix = parseTickerPrefix(alias)
+    if (prefix.isNotEmpty() && prefix != tickerClean) {
+      throw IllegalArgumentException("ticker prefix \"$prefix\" does not match \"$tickerClean\"")
+    }
     val domain = parseDomain(alias)
     val configUrl = URL("https://$domain/.well-known/cryptalias/configuration")
     val configJson = JSONObject(httpGet(configUrl, "application/json"))
@@ -27,7 +32,7 @@ object CryptaliasClient {
       throw IllegalStateException("missing key in configuration")
     }
 
-    val resolveUrl = URL("$resolver/_cryptalias/resolve/${urlEncode(ticker)}/${urlEncode(alias)}")
+    val resolveUrl = URL("$resolver/_cryptalias/resolve/${urlEncode(tickerClean)}/${urlEncode(alias)}")
     val jws = httpGet(resolveUrl, "application/jose")
     val payloadJson = JSONObject(verifyJwsPayload(jws, configJson.getJSONObject("key")))
 
@@ -80,9 +85,23 @@ object CryptaliasClient {
   private fun parseDomain(alias: String): String {
     val idx = alias.lastIndexOf('$')
     if (idx == -1 || idx == alias.length - 1) {
-      throw IllegalArgumentException("alias must be in the format alias$domain")
+      throw IllegalArgumentException("alias must be in the format [ticker:]alias$domain")
     }
     return alias.substring(idx + 1)
+  }
+
+  private fun parseTickerPrefix(alias: String): String {
+    val idx = alias.lastIndexOf('$')
+    if (idx == -1 || idx == alias.length - 1) {
+      throw IllegalArgumentException("alias must be in the format [ticker:]alias$domain")
+    }
+    val left = alias.substring(0, idx)
+    val colon = left.indexOf(':')
+    if (colon == -1) return ""
+    if (colon == 0 || colon == left.length - 1 || left.indexOf(':', colon + 1) != -1) {
+      throw IllegalArgumentException("invalid format (expected [ticker:]alias[+tag]$domain)")
+    }
+    return left.substring(0, colon).lowercase()
   }
 
   private fun httpGet(url: URL, accept: String): String {
@@ -101,5 +120,9 @@ object CryptaliasClient {
 
   private fun urlEncode(value: String): String {
     return URLEncoder.encode(value, "UTF-8")
+  }
+
+  private fun normalizeTicker(value: String): String {
+    return value.trim().lowercase()
   }
 }

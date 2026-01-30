@@ -10,6 +10,7 @@ Cryptalias uses two public HTTP endpoints:
 
 - `GET /.well-known/cryptalias/configuration`
 - `GET /_cryptalias/resolve/{ticker}/{alias}`
+- `GET /_cryptalias/resolve/{alias}` (when `alias` includes a `ticker:` prefix)
 
 And two operational endpoints:
 
@@ -25,8 +26,8 @@ The key idea is simple:
 
 ## Terminology
 
-- Identifier format: `alias$domain` or `alias+tag$domain`
-- Example: `donations+2026$example.com`
+- Identifier format: `alias$domain`, `alias+tag$domain`, or `ticker:alias+tag$domain`
+- Example: `xmr:donations+2026$example.com`
 - Ticker: the asset symbol, such as `xmr` or `btc`
 
 ## Client algorithm (MUST / SHOULD)
@@ -37,9 +38,11 @@ Below is the reference client flow.
 
 Clients MUST:
 
-- Require the format `alias$domain` or `alias+tag$domain`
+- Require the format `alias$domain`, `alias+tag$domain`, or `ticker:alias+tag$domain`
 - Treat `alias`, `tag`, and `domain` as case-insensitive
 - Reject invalid identifiers early
+- If a `ticker:` prefix is present and the client also supplies a ticker via the resolver path or API, they MUST match (mismatch is an error)
+- Treat `:` as a reserved separator; aliases and tags MUST NOT contain `:`
 
 ### 2) Discover the domain config (MUST)
 
@@ -129,12 +132,15 @@ The well-known response includes:
 Clients MUST call:
 
 - `GET <resolver_endpoint>/_cryptalias/resolve/{ticker}/{alias}`
+- `GET <resolver_endpoint>/_cryptalias/resolve/{alias}` (when `alias` includes a `ticker:` prefix)
 
 Important:
 
 - `{alias}` is the full identifier including `$domain`
+- If the resolver path provides a ticker and the alias also includes a `ticker:` prefix, they MUST match (mismatch is an error)
 - Example:
   - `GET http://resolver.example/_cryptalias/resolve/xmr/donations$example.com`
+  - `GET http://resolver.example/_cryptalias/resolve/xmr:donations$example.com`
 
 ### 4) Verify the signed response (MUST)
 

@@ -6,7 +6,7 @@ Important:
 - The resolver response is a signed JWS. Each client verifies the signature and enforces `expires` (see `PROTOCOL.md`).
 
 Each client:
-1) Parses `alias$domain`
+1) Parses `[ticker:]alias$domain`
 2) Fetches `/.well-known/cryptalias/configuration` from the domain
 3) Calls `/_cryptalias/resolve/{ticker}/{alias}` on the resolver
 4) Decodes the JWS payload and returns `address`

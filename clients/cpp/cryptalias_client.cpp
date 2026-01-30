@@ -55,9 +55,36 @@ std::string http_get(const std::string& url, const std::string& accept) {
 std::string parse_domain(const std::string& alias) {
   auto pos = alias.rfind('$');
   if (pos == std::string::npos || pos == alias.size() - 1) {
-    throw std::runtime_error("alias must be in the format alias$domain");
+    throw std::runtime_error("alias must be in the format [ticker:]alias$domain");
   }
   return alias.substr(pos + 1);
+}
+
+std::string normalize_ticker(const std::string& value) {
+  std::string out;
+  out.reserve(value.size());
+  for (unsigned char c : value) {
+    if (!std::isspace(c)) {
+      out.push_back(static_cast<char>(std::tolower(c)));
+    }
+  }
+  return out;
+}
+
+std::string parse_ticker_prefix(const std::string& alias) {
+  auto pos = alias.rfind('$');
+  if (pos == std::string::npos || pos == alias.size() - 1) {
+    throw std::runtime_error("alias must be in the format [ticker:]alias$domain");
+  }
+  const std::string left = alias.substr(0, pos);
+  auto colon = left.find(':');
+  if (colon == std::string::npos) {
+    return "";
+  }
+  if (colon == 0 || colon == left.size() - 1 || left.find(':', colon + 1) != std::string::npos) {
+    throw std::runtime_error("invalid format (expected [ticker:]alias[+tag]$domain)");
+  }
+  return normalize_ticker(left.substr(0, colon));
 }
 
 std::string url_encode(const std::string& value) {
@@ -144,6 +171,11 @@ std::string resolve_address(const std::string& ticker, const std::string& alias)
     throw std::runtime_error("ticker and alias are required");
   }
 
+  const std::string ticker_clean = normalize_ticker(ticker);
+  const std::string prefix = parse_ticker_prefix(alias);
+  if (!prefix.empty() && prefix != ticker_clean) {
+    throw std::runtime_error("ticker prefix \"" + prefix + "\" does not match \"" + ticker_clean + "\"");
+  }
   const std::string domain = parse_domain(alias);
   const std::string cfg_url = "https://" + domain + "/.well-known/cryptalias/configuration";
 
@@ -161,7 +193,7 @@ std::string resolve_address(const std::string& ticker, const std::string& alias)
     throw std::runtime_error("missing key in configuration");
   }
 
-  const std::string resolve_url = resolver + "/_cryptalias/resolve/" + url_encode(ticker) + "/" + url_encode(alias);
+  const std::string resolve_url = resolver + "/_cryptalias/resolve/" + url_encode(ticker_clean) + "/" + url_encode(alias);
   const std::string jws = http_get(resolve_url, "application/jose");
   const std::string payload_json = verify_jws_payload(jws, cfg["key"].dump());
   auto payload = nlohmann::json::parse(payload_json);

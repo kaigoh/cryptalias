@@ -33,6 +33,19 @@ pub fn resolve_address(ticker: &str, alias: &str) -> Result<String, Box<dyn std:
     if ticker.is_empty() || alias.is_empty() {
         return Err("ticker and alias are required".into());
     }
+    let ticker_clean = normalize_ticker(ticker);
+    if ticker_clean.is_empty() {
+        return Err("ticker and alias are required".into());
+    }
+    if let Some(prefix) = parse_ticker_prefix(alias)? {
+        if prefix != ticker_clean {
+            return Err(format!(
+                "ticker prefix \"{}\" does not match \"{}\"",
+                prefix, ticker_clean
+            )
+            .into());
+        }
+    }
     let domain = parse_domain(alias)?;
 
     let cfg_url = format!(
@@ -57,7 +70,7 @@ pub fn resolve_address(ticker: &str, alias: &str) -> Result<String, Box<dyn std:
     let resolve_url = format!(
         "{}/_cryptalias/resolve/{}/{}",
         resolver,
-        urlencoding::encode(ticker),
+        urlencoding::encode(&ticker_clean),
         urlencoding::encode(alias)
     );
 
@@ -74,11 +87,35 @@ pub fn resolve_address(ticker: &str, alias: &str) -> Result<String, Box<dyn std:
 }
 
 fn parse_domain(alias: &str) -> Result<&str, Box<dyn std::error::Error>> {
-    let idx = alias.rfind('$').ok_or("alias must be in the format alias$domain")?;
+    let idx = alias
+        .rfind('$')
+        .ok_or("alias must be in the format [ticker:]alias$domain")?;
     if idx == alias.len() - 1 {
-        return Err("alias must be in the format alias$domain".into());
+        return Err("alias must be in the format [ticker:]alias$domain".into());
     }
     Ok(&alias[idx + 1..])
+}
+
+fn parse_ticker_prefix(alias: &str) -> Result<Option<String>, Box<dyn std::error::Error>> {
+    let idx = alias
+        .rfind('$')
+        .ok_or("alias must be in the format [ticker:]alias$domain")?;
+    if idx == alias.len() - 1 {
+        return Err("alias must be in the format [ticker:]alias$domain".into());
+    }
+    let left = &alias[..idx];
+    let colon = match left.find(':') {
+        Some(pos) => pos,
+        None => return Ok(None),
+    };
+    if colon == 0 || colon == left.len() - 1 || left[colon + 1..].contains(':') {
+        return Err("invalid format (expected [ticker:]alias[+tag]$domain)".into());
+    }
+    Ok(Some(left[..colon].to_lowercase()))
+}
+
+fn normalize_ticker(value: &str) -> String {
+    value.trim().to_lowercase()
 }
 
 fn decode_jws_payload(jws: &str) -> Result<ResolvedPayload, Box<dyn std::error::Error>> {

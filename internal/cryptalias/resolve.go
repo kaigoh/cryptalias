@@ -37,9 +37,16 @@ func ResolveAddress(ctx context.Context, ticker, alias string) (string, error) {
 	if ticker == "" || alias == "" {
 		return "", errors.New("ticker and alias are required")
 	}
-	domain, err := parseDomain(alias)
+	tickerClean := strings.ToLower(strings.TrimSpace(ticker))
+	if tickerClean == "" {
+		return "", errors.New("ticker and alias are required")
+	}
+	prefixTicker, _, _, domain, err := parseAliasParts(alias)
 	if err != nil {
 		return "", err
+	}
+	if prefixTicker != "" && prefixTicker != tickerClean {
+		return "", fmt.Errorf("ticker prefix %q does not match %q", prefixTicker, tickerClean)
 	}
 
 	cfgURL := fmt.Sprintf("https://%s/.well-known/cryptalias/configuration", domain)
@@ -60,7 +67,7 @@ func ResolveAddress(ctx context.Context, ticker, alias string) (string, error) {
 		return "", errors.New("missing key in configuration")
 	}
 
-	resolveURL := fmt.Sprintf("%s/_cryptalias/resolve/%s/%s", resolver, url.PathEscape(ticker), url.PathEscape(alias))
+	resolveURL := fmt.Sprintf("%s/_cryptalias/resolve/%s/%s", resolver, url.PathEscape(tickerClean), url.PathEscape(alias))
 	jws, err := httpGet(ctx, resolveURL, "application/jose")
 	if err != nil {
 		return "", err
@@ -74,14 +81,6 @@ func ResolveAddress(ctx context.Context, ticker, alias string) (string, error) {
 		return "", err
 	}
 	return payload.Address, nil
-}
-
-func parseDomain(alias string) (string, error) {
-	idx := strings.LastIndex(alias, "$")
-	if idx == -1 || idx == len(alias)-1 {
-		return "", errors.New("alias must be in the format alias$domain")
-	}
-	return alias[idx+1:], nil
 }
 
 func httpGet(ctx context.Context, urlStr, accept string) ([]byte, error) {

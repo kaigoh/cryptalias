@@ -10,9 +10,13 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jwk"
 )
 
-var re = regexp.MustCompile(`^([A-Za-z0-9.-]+)(?:\+([A-Za-z0-9.-]+))?\$([A-Za-z0-9.-]+)$`)
+var aliasPattern = regexp.MustCompile(`^(?:([A-Za-z0-9.-]+):)?([A-Za-z0-9.-]+)(?:\+([A-Za-z0-9.-]+))?\$([A-Za-z0-9.-]+)$`)
 
-var ErrAliasNotFound = errors.New("unknown alias")
+var (
+	ErrAliasNotFound  = errors.New("unknown alias")
+	ErrInvalidAlias   = errors.New("invalid alias")
+	ErrTickerMismatch = errors.New("ticker mismatch")
+)
 
 type walletResolver interface {
 	Resolve(ctx context.Context, cfg *Config, in dynamicAliasInput) (WalletAddress, error)
@@ -29,23 +33,11 @@ type Alias struct {
 // ParseAliasDomain extracts and validates the domain portion of an alias
 // identifier without checking whether the domain is configured.
 func ParseAliasDomain(input string) (string, error) {
-	inputClean := strings.ToLower(strings.TrimSpace(input))
-	if inputClean == "" {
-		return "", errors.New("empty identifier")
-	}
-	m := re.FindStringSubmatch(inputClean)
-	if m == nil {
-		return "", errors.New("invalid format (expected alias[+tag]$domain)")
-	}
-	if err := validateAliasOrTag(m[1], "alias"); err != nil {
+	_, _, _, domain, err := parseAliasParts(input)
+	if err != nil {
 		return "", err
 	}
-	if m[2] != "" {
-		if err := validateAliasOrTag(m[2], "tag"); err != nil {
-			return "", err
-		}
-	}
-	return m[3], nil
+	return domain, nil
 }
 
 // ParseAlias resolves only static mappings from config.
@@ -103,35 +95,26 @@ func ResolveAlias(ctx context.Context, input string, ticker string, cfg *Config,
 func parseAliasIdentifier(input string, ticker string, cfg *Config) (Alias, AliasDomainConfig, string, error) {
 	inputClean := strings.TrimSpace(input)
 	if inputClean == "" {
-		return Alias{}, AliasDomainConfig{}, "", errors.New("empty identifier")
+		return Alias{}, AliasDomainConfig{}, "", fmt.Errorf("%w: empty identifier", ErrInvalidAlias)
 	}
 
 	tickerClean := strings.ToLower(strings.TrimSpace(ticker))
 	if tickerClean == "" {
-		return Alias{}, AliasDomainConfig{}, "", errors.New("empty ticker")
+		return Alias{}, AliasDomainConfig{}, "", fmt.Errorf("%w: empty ticker", ErrInvalidAlias)
 	}
 
-	// Normalise for stable matching
-	inputClean = strings.ToLower(inputClean)
-	m := re.FindStringSubmatch(inputClean)
-	if m == nil {
-		return Alias{}, AliasDomainConfig{}, "", errors.New("invalid format (expected alias[+tag]$domain)")
+	prefixTicker, aliasName, tag, domain, err := parseAliasParts(inputClean)
+	if err != nil {
+		return Alias{}, AliasDomainConfig{}, "", err
+	}
+	if prefixTicker != "" && prefixTicker != tickerClean {
+		return Alias{}, AliasDomainConfig{}, "", fmt.Errorf("%w: prefix %q does not match %q", ErrTickerMismatch, prefixTicker, tickerClean)
 	}
 
 	alias := Alias{
-		Alias:  m[1],
-		Tag:    m[2],
-		Domain: m[3],
-	}
-
-	// Validate alias and tag legal characters
-	if err := validateAliasOrTag(alias.Alias, "alias"); err != nil {
-		return Alias{}, AliasDomainConfig{}, "", err
-	}
-	if alias.Tag != "" {
-		if err := validateAliasOrTag(alias.Tag, "tag"); err != nil {
-			return Alias{}, AliasDomainConfig{}, "", err
-		}
+		Alias:  aliasName,
+		Tag:    tag,
+		Domain: domain,
 	}
 
 	for _, d := range cfg.Domains {
@@ -147,6 +130,38 @@ func parseAliasIdentifier(input string, ticker string, cfg *Config) (Alias, Alia
 	}
 
 	return Alias{}, AliasDomainConfig{}, "", ErrAliasNotFound
+}
+
+func parseAliasParts(input string) (string, string, string, string, error) {
+	inputClean := strings.ToLower(strings.TrimSpace(input))
+	if inputClean == "" {
+		return "", "", "", "", fmt.Errorf("%w: empty identifier", ErrInvalidAlias)
+	}
+	m := aliasPattern.FindStringSubmatch(inputClean)
+	if m == nil {
+		return "", "", "", "", fmt.Errorf("%w: invalid format (expected [ticker:]alias[+tag]$domain)", ErrInvalidAlias)
+	}
+
+	prefixTicker := m[1]
+	alias := m[2]
+	tag := m[3]
+	domain := m[4]
+
+	if prefixTicker != "" {
+		if err := validateAliasOrTag(prefixTicker, "ticker"); err != nil {
+			return "", "", "", "", fmt.Errorf("%w: %v", ErrInvalidAlias, err)
+		}
+	}
+	if err := validateAliasOrTag(alias, "alias"); err != nil {
+		return "", "", "", "", fmt.Errorf("%w: %v", ErrInvalidAlias, err)
+	}
+	if tag != "" {
+		if err := validateAliasOrTag(tag, "tag"); err != nil {
+			return "", "", "", "", fmt.Errorf("%w: %v", ErrInvalidAlias, err)
+		}
+	}
+
+	return prefixTicker, alias, tag, domain, nil
 }
 
 func findAliasWallet(domainCfg AliasDomainConfig, aliasName, tag, tickerClean string) (WalletAddress, bool) {

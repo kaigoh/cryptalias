@@ -121,3 +121,23 @@ func TestParseAliasUnknownTicker(t *testing.T) {
 		t.Fatalf("expected unknown ticker to return an error")
 	}
 }
+
+func TestParseAliasAcceptsTickerPrefix(t *testing.T) {
+	cfg := testConfig(t)
+
+	alias, err := ParseAlias("xmr:demo$127.0.0.1", "xmr", cfg)
+	if err != nil {
+		t.Fatalf("parse alias with prefix: %v", err)
+	}
+	if alias.Wallet.Address != "addr-root" {
+		t.Fatalf("expected root address addr-root, got %q", alias.Wallet.Address)
+	}
+}
+
+func TestParseAliasTickerPrefixMismatch(t *testing.T) {
+	cfg := testConfig(t)
+
+	if _, err := ParseAlias("btc:demo$127.0.0.1", "xmr", cfg); err == nil {
+		t.Fatalf("expected prefix mismatch to return an error")
+	}
+}

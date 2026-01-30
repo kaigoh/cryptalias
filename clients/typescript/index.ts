@@ -6,6 +6,11 @@ export async function resolveAddress(
     throw new Error("ticker and alias are required");
   }
 
+  const tickerClean = normalizeTicker(ticker);
+  const prefix = parseTickerPrefix(alias);
+  if (prefix && prefix !== tickerClean) {
+    throw new Error(`ticker prefix "${prefix}" does not match "${tickerClean}"`);
+  }
   const domain = parseDomain(alias);
   const configUrl = `https://${domain}/.well-known/cryptalias/configuration`;
 
@@ -21,7 +26,7 @@ export async function resolveAddress(
     throw new Error("missing key in configuration");
   }
 
-  const resolveUrl = `${resolver}/_cryptalias/resolve/${encodeURIComponent(ticker)}/${encodeURIComponent(alias)}`;
+  const resolveUrl = `${resolver}/_cryptalias/resolve/${encodeURIComponent(tickerClean)}/${encodeURIComponent(alias)}`;
   const jws = await fetchText(resolveUrl);
   const payload = await verifyJwsAndDecodePayload(jws, config.key);
 
@@ -36,9 +41,27 @@ export async function resolveAddress(
 function parseDomain(value: string): string {
   const idx = value.lastIndexOf("$");
   if (idx === -1 || idx === value.length - 1) {
-    throw new Error("alias must be in the format alias$domain");
+    throw new Error("alias must be in the format [ticker:]alias$domain");
   }
   return value.slice(idx + 1);
+}
+
+function parseTickerPrefix(value: string): string {
+  const idx = value.lastIndexOf("$");
+  if (idx === -1 || idx === value.length - 1) {
+    throw new Error("alias must be in the format [ticker:]alias$domain");
+  }
+  const left = value.slice(0, idx);
+  const colon = left.indexOf(":");
+  if (colon === -1) return "";
+  if (colon === 0 || colon === left.length - 1 || left.indexOf(":", colon + 1) !== -1) {
+    throw new Error("invalid format (expected [ticker:]alias[+tag]$domain)");
+  }
+  return left.slice(0, colon).toLowerCase();
+}
+
+function normalizeTicker(value: string): string {
+  return String(value || "").trim().toLowerCase();
 }
 
 async function fetchJson(url: string): Promise<any> {

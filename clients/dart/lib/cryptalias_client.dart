@@ -7,6 +7,11 @@ Future<String> resolveAddress(String ticker, String alias) async {
     throw Exception('ticker and alias are required');
   }
 
+  final tickerClean = _normalizeTicker(ticker);
+  final prefix = _parseTickerPrefix(alias);
+  if (prefix.isNotEmpty && prefix != tickerClean) {
+    throw Exception('ticker prefix "$prefix" does not match "$tickerClean"');
+  }
   final domain = _parseDomain(alias);
   final configUrl = Uri.parse('https://$domain/.well-known/cryptalias/configuration');
   final configRes = await http.get(configUrl, headers: {'Accept': 'application/json'});
@@ -24,7 +29,7 @@ Future<String> resolveAddress(String ticker, String alias) async {
   }
 
   final resolveUrl = Uri.parse(
-    '$resolver/_cryptalias/resolve/${Uri.encodeComponent(ticker)}/${Uri.encodeComponent(alias)}',
+    '$resolver/_cryptalias/resolve/${Uri.encodeComponent(tickerClean)}/${Uri.encodeComponent(alias)}',
   );
   final resolveRes = await http.get(resolveUrl, headers: {'Accept': 'application/jose'});
   if (resolveRes.statusCode < 200 || resolveRes.statusCode >= 300) {
@@ -46,10 +51,26 @@ Future<Map<String, dynamic>> verifyJwsPayload(String jws, Map<String, dynamic> j
 String _parseDomain(String alias) {
   final idx = alias.lastIndexOf(r'$');
   if (idx == -1 || idx == alias.length - 1) {
-    throw Exception('alias must be in the format alias\$domain');
+    throw Exception('alias must be in the format [ticker:]alias\$domain');
   }
   return alias.substring(idx + 1);
 }
+
+String _parseTickerPrefix(String alias) {
+  final idx = alias.lastIndexOf(r'$');
+  if (idx == -1 || idx == alias.length - 1) {
+    throw Exception('alias must be in the format [ticker:]alias\$domain');
+  }
+  final left = alias.substring(0, idx);
+  final colon = left.indexOf(':');
+  if (colon == -1) return '';
+  if (colon == 0 || colon == left.length - 1 || left.indexOf(':', colon + 1) != -1) {
+    throw Exception('invalid format (expected [ticker:]alias[+tag]\$domain)');
+  }
+  return left.substring(0, colon).toLowerCase();
+}
+
+String _normalizeTicker(String value) => value.trim().toLowerCase();
 
 List<int> _base64UrlDecode(String input) {
   var padded = input.replaceAll('-', '+').replaceAll('_', '/');

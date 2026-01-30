@@ -94,6 +94,8 @@ func Run(configPath string) error {
 	resolveHandler = corsMiddleware(resolveHandler)
 	publicMux.Handle("GET /_cryptalias/resolve/{ticker}/{alias}", resolveHandler)
 	publicMux.Handle("OPTIONS /_cryptalias/resolve/{ticker}/{alias}", resolveHandler)
+	publicMux.Handle("GET /_cryptalias/resolve/{alias}", resolveHandler)
+	publicMux.Handle("OPTIONS /_cryptalias/resolve/{alias}", resolveHandler)
 
 	publicAddr := fmt.Sprintf(":%d", cfg.PublicPort)
 	publicServer := &http.Server{Handler: publicMux}

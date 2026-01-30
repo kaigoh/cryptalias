@@ -13,6 +13,11 @@ public func resolveAddress(ticker: String, alias: String) async throws -> String
   if ticker.isEmpty || alias.isEmpty {
     throw CryptaliasError.invalidAlias
   }
+  let tickerClean = normalizeTicker(ticker)
+  let prefix = try parseTickerPrefix(alias)
+  if !prefix.isEmpty && prefix != tickerClean {
+    throw CryptaliasError.invalidAlias
+  }
   let domain = try parseDomain(alias)
   let configUrl = URL(string: "https://\(domain)/.well-known/cryptalias/configuration")!
 
@@ -22,7 +27,7 @@ public func resolveAddress(ticker: String, alias: String) async throws -> String
   guard !resolver.isEmpty else { throw CryptaliasError.missingResolver }
   guard let jwk = configJson?["key"] as? [String: Any] else { throw CryptaliasError.missingKey }
 
-  let resolveUrl = URL(string: "\(resolver)/_cryptalias/resolve/\(urlEncode(ticker))/\(urlEncode(alias))")!
+  let resolveUrl = URL(string: "\(resolver)/_cryptalias/resolve/\(urlEncode(tickerClean))/\(urlEncode(alias))")!
   let jwsData = try await httpGet(url: resolveUrl, accept: "application/jose")
   let jws = String(decoding: jwsData, as: UTF8.self)
   let payload = try verifyJwsPayload(jws: jws, jwk: jwk)
@@ -64,6 +69,23 @@ private func parseDomain(_ alias: String) throws -> String {
   return String(alias[alias.index(after: idx)...])
 }
 
+private func parseTickerPrefix(_ alias: String) throws -> String {
+  guard let idx = alias.lastIndex(of: "$"), idx < alias.index(before: alias.endIndex) else {
+    throw CryptaliasError.invalidAlias
+  }
+  let left = alias[..<idx]
+  guard let colon = left.firstIndex(of: ":") else {
+    return ""
+  }
+  if colon == left.startIndex || colon == left.index(before: left.endIndex) {
+    throw CryptaliasError.invalidAlias
+  }
+  if left[left.index(after: colon)...].contains(":") {
+    throw CryptaliasError.invalidAlias
+  }
+  return String(left[..<colon]).lowercased()
+}
+
 private func httpGet(url: URL, accept: String) async throws -> Data {
   var request = URLRequest(url: url)
   request.setValue(accept, forHTTPHeaderField: "Accept")
@@ -99,4 +121,8 @@ private func urlEncode(_ value: String) -> String {
   var allowed = CharacterSet.urlPathAllowed
   allowed.remove(charactersIn: "/")
   return value.addingPercentEncoding(withAllowedCharacters: allowed) ?? value
+}
+
+private func normalizeTicker(_ value: String) -> String {
+  value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
 }

@@ -56,11 +56,28 @@ func AliasResolverHandler(store *ConfigStore, resolver walletResolver, statuses 
 		rawAlias := r.PathValue("alias")
 		slog.Debug("resolve request", "ticker", ticker, "alias", rawAlias)
 
-		if len(strings.TrimSpace(ticker)) == 0 || len(strings.TrimSpace(rawAlias)) == 0 {
+		if len(strings.TrimSpace(rawAlias)) == 0 {
 			slog.Warn("resolve rejected empty input")
 			w.WriteHeader(http.StatusBadRequest)
-			fmt.Fprintf(w, "400 ticker and alias must not be empty")
+			fmt.Fprintf(w, "400 alias must not be empty")
 			return
+		}
+		ticker = strings.TrimSpace(ticker)
+		if ticker == "" {
+			prefix, _, _, _, err := parseAliasParts(rawAlias)
+			if err != nil {
+				slog.Warn("resolve rejected invalid alias", "ticker", ticker, "alias", rawAlias, "error", err)
+				w.WriteHeader(http.StatusBadRequest)
+				fmt.Fprintf(w, "400 %s", err.Error())
+				return
+			}
+			if prefix == "" {
+				slog.Warn("resolve rejected missing ticker", "alias", rawAlias)
+				w.WriteHeader(http.StatusBadRequest)
+				fmt.Fprintf(w, "400 %s", fmt.Errorf("%w: missing ticker", ErrInvalidAlias).Error())
+				return
+			}
+			ticker = prefix
 		}
 
 		c := store.Get()
@@ -88,6 +105,12 @@ func AliasResolverHandler(store *ConfigStore, resolver walletResolver, statuses 
 				slog.Warn("resolve alias not found", "ticker", ticker, "alias", rawAlias, "client", clientKey)
 				w.WriteHeader(http.StatusNotFound)
 				fmt.Fprintf(w, "404 %s", ErrAliasNotFound.Error())
+				return
+			}
+			if errors.Is(err, ErrInvalidAlias) || errors.Is(err, ErrTickerMismatch) {
+				slog.Warn("resolve rejected invalid alias", "ticker", ticker, "alias", rawAlias, "client", clientKey, "error", err)
+				w.WriteHeader(http.StatusBadRequest)
+				fmt.Fprintf(w, "400 %s", err.Error())
 				return
 			}
 			slog.Error("resolve failed", "ticker", ticker, "alias", rawAlias, "client", clientKey, "error", err)

@@ -112,3 +112,38 @@ func TestAliasResolverHandlerSignsPayload(t *testing.T) {
 		t.Fatalf("expected expires to be in the future, got %v", payload.Expires)
 	}
 }
+
+func TestAliasResolverHandlerAcceptsPrefixedAlias(t *testing.T) {
+	store, resolver := newTestStore(t)
+	statuses := NewDomainStatusStore(store.Get())
+	req := httptest.NewRequest(http.MethodGet, "/_cryptalias/resolve/xmr:demo$127.0.0.1", nil)
+	req.SetPathValue("alias", "xmr:demo$127.0.0.1")
+	rr := httptest.NewRecorder()
+
+	AliasResolverHandler(store, resolver, statuses).ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rr.Code, rr.Body.String())
+	}
+	if ct := rr.Header().Get("Content-Type"); ct != "application/jose" {
+		t.Fatalf("expected application/jose content-type, got %q", ct)
+	}
+
+	cfg := store.Get()
+	pubKey := ed25519.PublicKey(cfg.Domains[0].PublicKey)
+	verified, err := jws.Verify(rr.Body.Bytes(), jws.WithKey(jwa.EdDSA(), pubKey))
+	if err != nil {
+		t.Fatalf("verify jws: %v", err)
+	}
+
+	var payload ResolvedAddress
+	if err := json.Unmarshal(verified, &payload); err != nil {
+		t.Fatalf("unmarshal payload: %v", err)
+	}
+	if payload.Ticker != "xmr" {
+		t.Fatalf("expected ticker xmr, got %q", payload.Ticker)
+	}
+	if payload.Address != "addr-root" {
+		t.Fatalf("expected address addr-root, got %q", payload.Address)
+	}
+}

@@ -139,6 +139,7 @@ cryptalias resolve --json 'alice$example.com' xmr
 6. **Test resolution:**
    ```
    http://cryptalias.localhost/_cryptalias/resolve/xmr/me$cryptalias.localhost
+   http://cryptalias.localhost/_cryptalias/resolve/xmr:me$cryptalias.localhost
    ```
 
 ## Configuration
@@ -437,7 +438,7 @@ Cryptalias refuses to start as root.
 - Verify domain matches `domains[].domain` in config
 - Ensure alias exists under that domain
 - Confirm ticker is defined in `tokens[].tickers`
-- Check alias format: `alias$domain` or `alias+tag$domain`
+- Check alias format: `alias$domain`, `alias+tag$domain`, or `ticker:alias+tag$domain`
 
 **Config changes not taking effect**
 
