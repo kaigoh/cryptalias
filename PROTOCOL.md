@@ -152,7 +152,7 @@ The expected payload shape (after verifying the JWS) is:
 
 ```json
 {
-  "version": 0,
+  "version": 1,
   "ticker": "xmr",
   "address": "...",
   "expires": "2026-01-25T15:37:49Z",

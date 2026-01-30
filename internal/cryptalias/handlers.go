@@ -36,11 +36,10 @@ func WellKnownHandler(store *ConfigStore) http.HandlerFunc {
 		}
 
 		d := WalletDomain{
-			Version:      VERSION,
-			Domain:       domain.Domain,
-			PublicKey:    key,
-			ResolverMode: AliasResolverModeDelegated,
-			Resolver:     AliasResolver{ResolverEndpoint: c.BaseURL},
+			Version:   VERSION,
+			Domain:    domain.Domain,
+			PublicKey: key,
+			Resolver:  AliasResolver{ResolverEndpoint: c.BaseURL},
 		}
 
 		w.WriteHeader(http.StatusOK)

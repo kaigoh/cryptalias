@@ -10,13 +10,6 @@ type AliasResolver struct {
 	ResolverEndpoint string `json:"resolver_endpoint"`
 }
 
-type AliasResolverMode string
-
-const (
-	AliasResolverModeDelegated AliasResolverMode = "delegated"
-	AliasResolverModeStatic    AliasResolverMode = "static"
-)
-
 type WalletAddress struct {
 	Ticker  string `json:"ticker" yaml:"ticker"`
 	Address string `json:"address" yaml:"address"`
@@ -39,12 +32,11 @@ type WalletTag struct {
 }
 
 type WalletDomain struct {
-	Version      uint              `json:"version"`
-	ResolverMode AliasResolverMode `json:"resolver_mode"`
-	Resolver     AliasResolver     `json:"resolver"`
-	Domain       string            `json:"domain"`
-	PublicKey    jwk.Key           `json:"key"`
-	Aliases      []WalletAlias     `json:"aliases,omitempty"`
+	Version   uint          `json:"version"`
+	Resolver  AliasResolver `json:"resolver"`
+	Domain    string        `json:"domain"`
+	PublicKey jwk.Key       `json:"key"`
+	Aliases   []WalletAlias `json:"aliases,omitempty"`
 }
 
 type ResolvedAddress struct {

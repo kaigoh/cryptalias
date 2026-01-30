@@ -10,6 +10,6 @@
     "expires": "2099-01-01T00:00:00Z",
     "nonce": "test-nonce",
     "ticker": "xmr",
-    "version": 0
+    "version": 1
   }
 }
