@@ -403,7 +403,7 @@ verify:
 
 ### CORS for Browser Clients
 
-Browser-based resolvers need CORS headers on the public resolver endpoint (`/_cryptalias/...`). Cryptalias sets permissive CORS for the resolver:
+Browser-based resolvers need CORS headers on the public resolver endpoint (`/_cryptalias/...`). Cryptalias sets permissive CORS for all endpoints:
 
 - `Access-Control-Allow-Origin: *`
 - `Access-Control-Allow-Methods: GET, OPTIONS`
